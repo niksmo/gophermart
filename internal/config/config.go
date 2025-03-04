@@ -1,1 +1,29 @@
 package config
+
+import (
+	"errors"
+
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+)
+
+func Init() {
+	pflag.ErrHelp = errors.New("gophermart: help requested")
+	pflag.StringP(addrFlag, addrFlagShort, addrDefault, addrUsage)
+	pflag.StringP(dbURIFlag, dbURIFlagShort, dbURIDefault, dbURIUsage)
+	pflag.StringP(accrualFlag, accrualFlagShort, accrualDefault, accrualUsage)
+	pflag.Parse()
+
+	var err error
+	err = viper.BindPFlags(pflag.CommandLine)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, env := range []string{addrEnv, dbURIEnv, accrualEnv} {
+		err = viper.BindEnv(env)
+		if err != nil {
+			panic(err)
+		}
+	}
+}

@@ -1,1 +1,3 @@
 package logger
+
+func New() {}
