@@ -12,8 +12,8 @@ const (
 	accrualEnv       = "ACCRUAL_SYSTEM_ADDRESS"
 	accrualFlag      = "accrual"
 	accrualFlagShort = "r"
-	accrualUsage     = "Accrual system address"
-	accrualDefault   = "http://127.0.0.1:5000"
+	accrualUsage     = "accrual system address"
+	accrualDefault   = "http://127.0.0.1:5050"
 )
 
 type AccrualAddrConfig struct {
@@ -28,6 +28,8 @@ func NewAccrualAddrConfig() *AccrualAddrConfig {
 	flagValue := viper.GetString(accrualFlag)
 	envValue := viper.GetString(accrualEnv)
 
+	errParsePrefix := "parse accrual system address"
+
 	if envValue != "" {
 		baseURL, err := url.ParseRequestURI(envValue)
 		if err == nil {
@@ -35,7 +37,7 @@ func NewAccrualAddrConfig() *AccrualAddrConfig {
 			return &config
 		}
 		log.Println(fmt.Errorf(
-			"parse accrual system address env value err: %w", err,
+			errParsePrefix+" env value err: %w", err,
 		))
 	}
 
@@ -44,7 +46,9 @@ func NewAccrualAddrConfig() *AccrualAddrConfig {
 		config.base = baseURL
 		return &config
 	}
-	log.Println(fmt.Errorf("parse accrual system flag value err: %w", err))
+	log.Println(fmt.Errorf(
+		errParsePrefix+" flag value err: %w", err,
+	))
 
 	baseURL, _ = url.ParseRequestURI(accrualDefault)
 	config.base = baseURL

@@ -2,7 +2,6 @@ package config
 
 import (
 	"errors"
-	"log"
 
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -18,13 +17,13 @@ func Init() {
 	var err error
 	err = viper.BindPFlags(pflag.CommandLine)
 	if err != nil {
-		log.Panic(err)
+		panic(err)
 	}
 
 	for _, env := range []string{addrEnv, dbURIEnv, accrualEnv} {
 		err = viper.BindEnv(env)
 		if err != nil {
-			log.Panic(err)
+			panic(err)
 		}
 	}
 }

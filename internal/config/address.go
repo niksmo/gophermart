@@ -12,7 +12,7 @@ const (
 	addrEnv       = "RUN_ADDRESS"
 	addrFlag      = "addr"
 	addrFlagShort = "a"
-	addrUsage     = "Run address"
+	addrUsage     = "run address"
 	addrDefault   = "127.0.0.1:8080"
 )
 
@@ -23,20 +23,21 @@ type AddressConfig struct {
 func NewAddressConfig() *AddressConfig {
 	flagValue := viper.GetString(addrFlag)
 	envValue := viper.GetString(addrEnv)
+	errParsePrefix := "parse run address"
 
 	if envValue != "" {
 		TCPAddr, err := net.ResolveTCPAddr("", envValue)
 		if err == nil {
 			return &AddressConfig{TCPAddr}
 		}
-		log.Println(fmt.Errorf("parse run address env value err:%w", err))
+		log.Println(fmt.Errorf(errParsePrefix+" env value err:%w", err))
 	}
 
 	TCPAddr, err := net.ResolveTCPAddr("", flagValue)
 	if err == nil {
 		return &AddressConfig{TCPAddr}
 	}
-	log.Println(fmt.Errorf("parse run address flag value err: %w", err))
+	log.Println(fmt.Errorf(errParsePrefix+" flag value err: %w", err))
 
 	TCPAddr, _ = net.ResolveTCPAddr("", addrDefault)
 	log.Println("use default run address:", addrDefault)
