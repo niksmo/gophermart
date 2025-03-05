@@ -2,9 +2,9 @@ package config
 
 import (
 	"errors"
-	"fmt"
 	"net/url"
 
+	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 )
 
@@ -15,33 +15,44 @@ const (
 	dbURIDefault   = ""
 	dbURIUsage     = "example: " +
 		"'postgres://user:pwd@127.0.0.1:5432/db_name/sslmode=disable'"
+	dbURIFlagPrint = "-" + dbURIFlagShort
 )
 
 type DatabaseCofig struct {
 	URI string
 }
 
-func NewDatabaseConfig() *DatabaseCofig {
+func NewDatabaseConfig(logger *zerolog.Logger) *DatabaseCofig {
 	flagValue := viper.GetString(dbURIFlag)
 	envValue := viper.GetString(dbURIEnv)
+	configLogger := logger.With().Str("config", "database").Logger()
 
 	if envValue != "" {
 		DSN, err := parseDSN(envValue)
-		if err != nil {
-			panic(fmt.Errorf("%w; %s", err, dbURIUsage))
+		if err == nil {
+			return &DatabaseCofig{URI: DSN}
 		}
-		return &DatabaseCofig{URI: DSN}
+		configLogger.Warn().
+			Str("env", dbURIEnv).
+			Str("value", envValue).
+			Err(err).
+			Send()
 	}
 
 	if flagValue != "" {
 		DSN, err := parseDSN(flagValue)
-		if err != nil {
-			panic(fmt.Errorf("%w; %s", err, dbURIUsage))
+		if err == nil {
+			return &DatabaseCofig{URI: DSN}
 		}
-		return &DatabaseCofig{URI: DSN}
+		configLogger.Warn().
+			Str("flag", dbURIFlagPrint).
+			Str("value", flagValue).
+			Err(err).
+			Send()
 	}
 
-	panic("Database URI not set; " + dbURIUsage)
+	configLogger.Fatal().Msg("URI not set")
+	return nil
 }
 
 func parseDSN(value string) (string, error) {
