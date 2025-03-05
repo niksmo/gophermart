@@ -7,7 +7,7 @@ import (
 )
 
 func New() *zerolog.Logger {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMicro
 	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
 	return &logger
 }
