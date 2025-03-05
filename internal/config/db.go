@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 )
 
@@ -21,7 +22,7 @@ type DatabaseCofig struct {
 	URI string
 }
 
-func NewDatabaseConfig() *DatabaseCofig {
+func NewDatabaseConfig(logger *zerolog.Logger) *DatabaseCofig {
 	flagValue := viper.GetString(dbURIFlag)
 	envValue := viper.GetString(dbURIEnv)
 
