@@ -51,3 +51,7 @@ func NewAddressConfig(logger zerolog.Logger) AddressConfig {
 
 	return AddressConfig{TCPAddr}
 }
+
+func (c *AddressConfig) Addr() string {
+	return c.String()
+}
