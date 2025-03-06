@@ -6,7 +6,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func New(driver, dsn string, logger *zerolog.Logger) *sql.DB {
+func New(driver, dsn string, logger zerolog.Logger) *sql.DB {
 	logFatal := func(err error) {
 		logger.Fatal().Err(err).Caller().Send()
 	}

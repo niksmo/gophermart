@@ -22,7 +22,7 @@ type DatabaseCofig struct {
 	URI string
 }
 
-func NewDatabaseConfig(logger *zerolog.Logger) *DatabaseCofig {
+func NewDatabaseConfig(logger zerolog.Logger) (config DatabaseCofig) {
 	flagValue := viper.GetString(dbURIFlag)
 	envValue := viper.GetString(dbURIEnv)
 	configLogger := logger.With().Str("config", "database").Logger()
@@ -30,7 +30,8 @@ func NewDatabaseConfig(logger *zerolog.Logger) *DatabaseCofig {
 	if envValue != "" {
 		DSN, err := parseDSN(envValue)
 		if err == nil {
-			return &DatabaseCofig{URI: DSN}
+			config = DatabaseCofig{URI: DSN}
+			return
 		}
 		configLogger.Warn().
 			Str("env", dbURIEnv).
@@ -42,7 +43,8 @@ func NewDatabaseConfig(logger *zerolog.Logger) *DatabaseCofig {
 	if flagValue != "" {
 		DSN, err := parseDSN(flagValue)
 		if err == nil {
-			return &DatabaseCofig{URI: DSN}
+			config = DatabaseCofig{URI: DSN}
+			return
 		}
 		configLogger.Warn().
 			Str("flag", dbURIFlagPrint).
@@ -52,7 +54,7 @@ func NewDatabaseConfig(logger *zerolog.Logger) *DatabaseCofig {
 	}
 
 	configLogger.Fatal().Msg("URI not set")
-	return nil
+	return
 }
 
 func parseDSN(value string) (string, error) {

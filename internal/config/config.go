@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func Init(logger *zerolog.Logger) {
+func Init(logger zerolog.Logger) {
 	pflag.ErrHelp = errors.New("gophermart: help requested")
 	pflag.StringP(addrFlag, addrFlagShort, addrDefault, addrUsage)
 	pflag.StringP(dbURIFlag, dbURIFlagShort, dbURIDefault, dbURIUsage)

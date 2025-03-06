@@ -20,7 +20,7 @@ type AddressConfig struct {
 	*net.TCPAddr
 }
 
-func NewAddressConfig(logger *zerolog.Logger) *AddressConfig {
+func NewAddressConfig(logger zerolog.Logger) AddressConfig {
 	flagValue := viper.GetString(addrFlag)
 	envValue := viper.GetString(addrEnv)
 	log := logger.With().Str("config", "runAddress").Logger()
@@ -30,7 +30,7 @@ func NewAddressConfig(logger *zerolog.Logger) *AddressConfig {
 		envLog := log.With().Str("env", addrEnv).Str("value", envValue).Logger()
 		if err == nil {
 			envLog.Info().Msg("use env value")
-			return &AddressConfig{TCPAddr}
+			return AddressConfig{TCPAddr}
 		}
 		envLog.Warn().Err(err)
 	}
@@ -42,12 +42,12 @@ func NewAddressConfig(logger *zerolog.Logger) *AddressConfig {
 		Logger()
 	if err == nil {
 		flagLog.Info().Msg("use flag value")
-		return &AddressConfig{TCPAddr}
+		return AddressConfig{TCPAddr}
 	}
 	flagLog.Warn().Err(err).Send()
 
 	TCPAddr, _ = net.ResolveTCPAddr("", addrDefault)
 	log.Info().Str("flag", addrFlagPrint).Msg("use default value")
 
-	return &AddressConfig{TCPAddr}
+	return AddressConfig{TCPAddr}
 }

@@ -21,7 +21,7 @@ type AccrualAddrConfig struct {
 	ordersGet string
 }
 
-func NewAccrualAddrConfig(logger *zerolog.Logger) *AccrualAddrConfig {
+func NewAccrualAddrConfig(logger zerolog.Logger) AccrualAddrConfig {
 	var config AccrualAddrConfig
 	config.ordersGet = "/api/orders"
 
@@ -38,7 +38,7 @@ func NewAccrualAddrConfig(logger *zerolog.Logger) *AccrualAddrConfig {
 		if err == nil {
 			config.base = baseURL
 			envLog.Info().Msg("use env value")
-			return &config
+			return config
 		}
 		envLog.Warn().Err(err).Send()
 	}
@@ -51,7 +51,7 @@ func NewAccrualAddrConfig(logger *zerolog.Logger) *AccrualAddrConfig {
 	if err == nil {
 		config.base = baseURL
 		flagLog.Info().Msg("use flag value")
-		return &config
+		return config
 	}
 	flagLog.Warn().Err(err).Send()
 
@@ -59,7 +59,7 @@ func NewAccrualAddrConfig(logger *zerolog.Logger) *AccrualAddrConfig {
 	config.base = baseURL
 	log.Info().Str("flag", accrualFlagPrint).Msg("use default value")
 
-	return &config
+	return config
 }
 
 func (config *AccrualAddrConfig) GetOrdersReqURL(order string) string {

@@ -6,10 +6,10 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func New() *zerolog.Logger {
+func New() zerolog.Logger {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMicro
 	logger := zerolog.New(os.Stdout).With().Timestamp().Logger()
-	return &logger
+	return logger
 }
 
 func SetLevel(level zerolog.Level) {
