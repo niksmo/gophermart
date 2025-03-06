@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/niksmo/gophermart/internal/logger"
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 )
@@ -18,10 +19,10 @@ type LoggerConfig struct {
 	Level zerolog.Level
 }
 
-func NewLoggerConfig(logger zerolog.Logger) LoggerConfig {
+func NewLoggerConfig() LoggerConfig {
 	flagValue := viper.GetString(logLevelFlag)
 	envValue := viper.GetString(logLevelEnv)
-	log := logger.With().Str("config", "logger").Logger()
+	log := logger.Instance.With().Str("config", "logger").Logger()
 
 	if envValue != "" {
 		level, err := zerolog.ParseLevel(envValue)

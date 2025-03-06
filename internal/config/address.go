@@ -3,7 +3,7 @@ package config
 import (
 	"net"
 
-	"github.com/rs/zerolog"
+	"github.com/niksmo/gophermart/internal/logger"
 	"github.com/spf13/viper"
 )
 
@@ -20,10 +20,10 @@ type AddressConfig struct {
 	*net.TCPAddr
 }
 
-func NewAddressConfig(logger zerolog.Logger) AddressConfig {
+func NewAddressConfig() AddressConfig {
 	flagValue := viper.GetString(addrFlag)
 	envValue := viper.GetString(addrEnv)
-	log := logger.With().Str("config", "runAddress").Logger()
+	log := logger.Instance.With().Str("config", "runAddress").Logger()
 
 	if envValue != "" {
 		TCPAddr, err := net.ResolveTCPAddr("", envValue)

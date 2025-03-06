@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/url"
 
-	"github.com/rs/zerolog"
+	"github.com/niksmo/gophermart/internal/logger"
 	"github.com/spf13/viper"
 )
 
@@ -22,10 +22,10 @@ type DatabaseCofig struct {
 	URI string
 }
 
-func NewDatabaseConfig(logger zerolog.Logger) (config DatabaseCofig) {
+func NewDatabaseConfig() (config DatabaseCofig) {
 	flagValue := viper.GetString(dbURIFlag)
 	envValue := viper.GetString(dbURIEnv)
-	configLogger := logger.With().Str("config", "database").Logger()
+	configLogger := logger.Instance.With().Str("config", "database").Logger()
 
 	if envValue != "" {
 		DSN, err := parseDSN(envValue)

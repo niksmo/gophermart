@@ -3,7 +3,7 @@ package config
 import (
 	"net/url"
 
-	"github.com/rs/zerolog"
+	"github.com/niksmo/gophermart/internal/logger"
 	"github.com/spf13/viper"
 )
 
@@ -21,13 +21,13 @@ type AccrualAddrConfig struct {
 	ordersGet string
 }
 
-func NewAccrualAddrConfig(logger zerolog.Logger) AccrualAddrConfig {
+func NewAccrualAddrConfig() AccrualAddrConfig {
 	var config AccrualAddrConfig
 	config.ordersGet = "/api/orders"
 
 	flagValue := viper.GetString(accrualFlag)
 	envValue := viper.GetString(accrualEnv)
-	log := logger.With().Str("config", "accrualAddress").Logger()
+	log := logger.Instance.With().Str("config", "accrualAddress").Logger()
 
 	if envValue != "" {
 		baseURL, err := url.ParseRequestURI(envValue)

@@ -2,18 +2,16 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 
-	"github.com/rs/zerolog"
+	"github.com/niksmo/gophermart/pkg/sqldb"
 )
 
 type UsersRepository struct {
-	logger zerolog.Logger
-	db     *sql.DB
+	dbService sqldb.DBService
 }
 
-func Users(db *sql.DB, logger zerolog.Logger) UsersRepository {
-	return UsersRepository{db: db, logger: logger}
+func Users(dbService sqldb.DBService) UsersRepository {
+	return UsersRepository{dbService: dbService}
 }
 
 func (repo UsersRepository) Create(

@@ -2,15 +2,13 @@ package auth
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/rs/zerolog"
 )
 
 type AuthHandler struct {
-	logger zerolog.Logger
 }
 
-func NewHandler(logger zerolog.Logger) AuthHandler {
-	return AuthHandler{logger: logger}
+func NewHandler() AuthHandler {
+	return AuthHandler{}
 }
 
 func (handler AuthHandler) Register(c *fiber.Ctx) error {

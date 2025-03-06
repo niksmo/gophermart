@@ -6,12 +6,12 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type SQLDB struct {
+type DBService struct {
 	*sql.DB
-	logger zerolog.Logger
+	Logger zerolog.Logger
 }
 
-func New(driver, dsn string, logger zerolog.Logger) SQLDB {
+func New(driver, dsn string, logger zerolog.Logger) DBService {
 	logFatal := func(err error) {
 		logger.Fatal().Err(err).Caller().Send()
 	}
@@ -24,14 +24,14 @@ func New(driver, dsn string, logger zerolog.Logger) SQLDB {
 	if err = db.Ping(); err != nil {
 		logFatal(err)
 	}
-	logger.Info().Str("driver", driver).Msg("databse is connected")
-	return SQLDB{DB: db, logger: logger}
+	logger.Info().Str("driver", driver).Msg("database connected")
+	return DBService{DB: db, Logger: logger}
 }
 
-func (sqldb SQLDB) Close() {
-	if err := sqldb.DB.Close(); err != nil {
-		sqldb.logger.Warn().Err(err).Msg("closing database connections")
+func (s DBService) Close() {
+	if err := s.DB.Close(); err != nil {
+		s.Logger.Warn().Err(err).Msg("closing database connections")
 	} else {
-		sqldb.logger.Info().Msg("database connections safely closed")
+		s.Logger.Info().Msg("database connections safely closed")
 	}
 }

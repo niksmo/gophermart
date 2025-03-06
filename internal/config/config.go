@@ -3,12 +3,12 @@ package config
 import (
 	"errors"
 
-	"github.com/rs/zerolog"
+	"github.com/niksmo/gophermart/internal/logger"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
-func Init(logger zerolog.Logger) {
+func Init() {
 	pflag.ErrHelp = errors.New("gophermart: help requested")
 	pflag.StringP(addrFlag, addrFlagShort, addrDefault, addrUsage)
 	pflag.StringP(dbURIFlag, dbURIFlagShort, dbURIDefault, dbURIUsage)
@@ -18,7 +18,7 @@ func Init(logger zerolog.Logger) {
 
 	err := viper.BindPFlags(pflag.CommandLine)
 	if err != nil {
-		logger.Fatal().Err(err).Caller().Send()
+		logger.Instance.Fatal().Err(err).Caller().Send()
 	}
 
 	envVars := []string{addrEnv, dbURIEnv, accrualEnv, logLevelEnv}
@@ -26,7 +26,7 @@ func Init(logger zerolog.Logger) {
 	for _, env := range envVars {
 		err = viper.BindEnv(env)
 		if err != nil {
-			logger.Fatal().Err(err).Caller().Send()
+			logger.Instance.Fatal().Err(err).Caller().Send()
 		}
 	}
 }
