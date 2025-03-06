@@ -5,7 +5,9 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/gofiber/contrib/fiberzerolog"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/niksmo/gophermart/internal/api"
 	"github.com/niksmo/gophermart/internal/config"
 	"github.com/niksmo/gophermart/internal/logger"
 	"github.com/niksmo/gophermart/pkg/server"
@@ -26,6 +28,11 @@ func main() {
 	appDB := sqldb.New("pgx", dbConfig.URI, appLogger)
 
 	appServer := server.NewHTTPServer(addrConfig.Addr(), appLogger)
+	appServer.Use(fiberzerolog.New(fiberzerolog.Config{Logger: &appLogger}))
+
+	router := appServer.Group("/api")
+	api.SetUserPath(router, appLogger)
+
 	go appServer.Run()
 
 	<-stopCtx.Done()
