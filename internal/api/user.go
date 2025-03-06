@@ -4,11 +4,16 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/niksmo/gophermart/internal/auth"
 	"github.com/niksmo/gophermart/internal/middleware"
+	"github.com/niksmo/gophermart/internal/repository"
+	"github.com/niksmo/gophermart/pkg/sqldb"
 )
 
-func SetUserPath(router fiber.Router) {
-	authHandler := auth.NewHandler()
+func SetUserPath(router fiber.Router, dbService sqldb.DBService) {
 	router = router.Group("/user", middleware.AllowJSON)
+
+	authHandler := auth.NewHandler(
+		auth.NewService(repository.Users(dbService)),
+	)
 	router.Post("/register", authHandler.Register)
 	router.Post("/login", authHandler.Login)
 }

@@ -1,24 +1,34 @@
 package auth
 
 import (
+	"errors"
+
 	"github.com/gofiber/fiber/v2"
 )
 
 type AuthHandler struct {
+	service AuthService
 }
 
-func NewHandler() AuthHandler {
-	return AuthHandler{}
+func NewHandler(service AuthService) AuthHandler {
+	return AuthHandler{service: service}
 }
 
-func (handler AuthHandler) Register(c *fiber.Ctx) error {
+func (h AuthHandler) Register(c *fiber.Ctx) error {
 	var payload SignupReqPayload
 	c.BodyParser(&payload)
 	c.Set(fiber.HeaderCacheControl, "no-store")
-	return c.JSON(payload)
+	err := h.service.RegisterUser(c.Context(), payload.Login, payload.Password)
+	if errors.Is(err, ErrLoginExists) {
+		return fiber.NewError(fiber.StatusConflict, ErrLoginExists.Error())
+	}
+	if err != nil {
+		return fiber.ErrInternalServerError
+	}
+	return c.SendString("Registered")
 }
 
-func (handler AuthHandler) Login(c *fiber.Ctx) error {
+func (h AuthHandler) Login(c *fiber.Ctx) error {
 	var payload SigninReqPayload
 	c.BodyParser(&payload)
 	c.Set(fiber.HeaderCacheControl, "no-store")

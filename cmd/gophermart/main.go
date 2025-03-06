@@ -33,7 +33,7 @@ func main() {
 	appServer.Use(fiberzerolog.New(fiberzerolog.Config{Logger: &logger.Instance}))
 
 	router := appServer.Group("/api")
-	api.SetUserPath(router)
+	api.SetUserPath(router, appDB)
 
 	go appServer.Run()
 
