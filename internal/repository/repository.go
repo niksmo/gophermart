@@ -9,7 +9,7 @@ import (
 func Init(dbService sqldb.DBService) {
 	_, err := dbService.Exec(migrations.Init)
 	if err != nil {
-		logger.Instance.Fatal().Err(err).Msg("repository initializing")
+		logger.Instance.Fatal().Err(err).Caller().Msg("repository initializing")
 	} else {
 		logger.Instance.Info().Msg("repository initialized")
 	}

@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"errors"
 
 	"github.com/niksmo/gophermart/internal/repository"
 )
@@ -16,9 +15,5 @@ func NewService(repository repository.UsersRepository) AuthService {
 }
 
 func (s AuthService) RegisterUser(ctx context.Context, login, password string) error {
-	err := s.repository.Create(ctx, login, password)
-	if errors.Is(err, repository.ErrExists) {
-		return ErrLoginExists
-	}
-	return err
+	return s.repository.Create(ctx, login, password)
 }

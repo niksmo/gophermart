@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/niksmo/gophermart/internal/errs"
 )
 
 type AuthHandler struct {
@@ -19,11 +20,13 @@ func (h AuthHandler) Register(c *fiber.Ctx) error {
 	c.BodyParser(&payload)
 	c.Set(fiber.HeaderCacheControl, "no-store")
 	err := h.service.RegisterUser(c.Context(), payload.Login, payload.Password)
-	if errors.Is(err, ErrLoginExists) {
-		return fiber.NewError(fiber.StatusConflict, ErrLoginExists.Error())
-	}
 	if err != nil {
-		return fiber.ErrInternalServerError
+		switch {
+		case errors.Is(err, errs.ErrLoginExists):
+			return fiber.NewError(fiber.StatusConflict, errs.ErrLoginExists.Error())
+		default:
+			return fiber.ErrInternalServerError
+		}
 	}
 	return c.SendString("Registered")
 }
