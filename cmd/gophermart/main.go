@@ -20,20 +20,21 @@ func main() {
 	logger.Init()
 	config.Init()
 
-	addrConfig := config.NewAddressConfig()
+	serverConfig := config.NewServerConfig()
 	_ = config.NewAccrualAddrConfig()
 	dbConfig := config.NewDatabaseConfig()
+	authConfig := config.NewAuthConfig()
 	loggerConfig := config.NewLoggerConfig()
 	logger.SetLevel(loggerConfig.Level)
 
 	appDB := sqldb.New("pgx", dbConfig.URI, logger.Instance)
 	repository.Init(appDB)
 
-	appServer := server.NewHTTPServer(addrConfig.Addr(), logger.Instance)
+	appServer := server.NewHTTPServer(serverConfig.Addr(), logger.Instance)
 	appServer.Use(fiberzerolog.New(fiberzerolog.Config{Logger: &logger.Instance}))
 
 	router := appServer.Group("/api")
-	api.SetUserPath(router, appDB)
+	api.SetUserPath(router, authConfig, appDB)
 
 	go appServer.Run()
 

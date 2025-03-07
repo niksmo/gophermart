@@ -10,6 +10,7 @@ var Instance zerolog.Logger
 
 func Init() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnixMicro
+	zerolog.MessageFieldName = "msg"
 	Instance = zerolog.New(os.Stdout).With().Timestamp().Logger()
 }
 

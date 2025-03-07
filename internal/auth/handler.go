@@ -18,7 +18,6 @@ func NewHandler(service AuthService) AuthHandler {
 func (h AuthHandler) Register(c *fiber.Ctx) error {
 	var payload SignupReqPayload
 	c.BodyParser(&payload)
-	c.Set(fiber.HeaderCacheControl, "no-store")
 	err := h.service.RegisterUser(c.Context(), payload.Login, payload.Password)
 	if err != nil {
 		switch {
@@ -28,6 +27,7 @@ func (h AuthHandler) Register(c *fiber.Ctx) error {
 			return fiber.ErrInternalServerError
 		}
 	}
+	c.Set(fiber.HeaderCacheControl, "no-store")
 	return c.SendString("Registered")
 }
 

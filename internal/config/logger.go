@@ -37,16 +37,18 @@ func NewLoggerConfig() LoggerConfig {
 		envLog.Warn().Err(err).Send()
 	}
 
-	level, err := zerolog.ParseLevel(flagValue)
-	flagLog := log.With().
-		Str("flag", logLevelFlagPrint).
-		Str("value", flagValue).
-		Logger()
-	if err == nil {
-		flagLog.Info().Msg("use flag value")
-		return LoggerConfig{Level: level}
+	if flagValue != logLevelDefault {
+		level, err := zerolog.ParseLevel(flagValue)
+		flagLog := log.With().
+			Str("flag", logLevelFlagPrint).
+			Str("value", flagValue).
+			Logger()
+		if err == nil {
+			flagLog.Info().Msg("use flag value")
+			return LoggerConfig{Level: level}
+		}
+		flagLog.Warn().Err(err).Send()
 	}
-	flagLog.Warn().Err(err).Send()
 
 	defaultLevel, _ := zerolog.ParseLevel(logLevelDefault)
 	log.Info().
