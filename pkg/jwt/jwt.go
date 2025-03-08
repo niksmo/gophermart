@@ -12,10 +12,10 @@ type Claims struct {
 	UserID int64 `json:"userID"`
 }
 
-func newClaims(ID int64, lifetime time.Duration) Claims {
+func newClaims(userID int64, lifetime time.Duration) Claims {
 	expiresAt := jwt.NewNumericDate(time.Now().Add(lifetime))
 	registeredClaims := jwt.RegisteredClaims{ExpiresAt: expiresAt}
-	return Claims{registeredClaims, ID}
+	return Claims{registeredClaims, userID}
 }
 
 func Create(

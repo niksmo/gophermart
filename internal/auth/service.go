@@ -5,6 +5,7 @@ import (
 
 	"github.com/niksmo/gophermart/config"
 	"github.com/niksmo/gophermart/internal/repository"
+	"github.com/niksmo/gophermart/pkg/jwt"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -17,10 +18,24 @@ func NewService(authConfig config.AuthConfig, repository repository.UsersReposit
 	return AuthService{authConfig: authConfig, repository: repository}
 }
 
-func (s AuthService) RegisterUser(ctx context.Context, login, password string) error {
+func (s AuthService) RegisterUser(
+	ctx context.Context, login, password string,
+) (string, error) {
 	pwdHash, err := bcrypt.GenerateFromPassword([]byte(password), s.authConfig.Cost())
 	if err != nil {
-		return err
+		return "", err
 	}
-	return s.repository.Create(ctx, login, string(pwdHash))
+	userID, err := s.repository.Create(ctx, login, string(pwdHash))
+	if err != nil {
+		return "", err
+	}
+
+	tokenString, err := jwt.Create(
+		userID, s.authConfig.Key(), s.authConfig.JWTLifetime(),
+	)
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
 }

@@ -45,8 +45,16 @@ func NewAuthConfig() AuthConfig {
 	}
 }
 
-func (c *AuthConfig) Cost() int {
+func (c AuthConfig) Cost() int {
 	return c.cost
+}
+
+func (c AuthConfig) Key() []byte {
+	return []byte(c.key)
+}
+
+func (c AuthConfig) JWTLifetime() time.Duration {
+	return c.jwtLifetime
 }
 
 func getCost() int {

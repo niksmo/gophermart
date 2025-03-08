@@ -21,23 +21,29 @@ func Users(db *pgxpool.Pool) UsersRepository {
 
 func (r UsersRepository) Create(
 	ctx context.Context, login string, password string,
-) error {
+) (int64, error) {
+	var (
+		userID int64 = -1
+		err    error
+	)
+
 	stmt := `
-	INSERT INTO users (login, password) VALUES ($1, $2);
+	INSERT INTO users (login, password) VALUES ($1, $2)
+	RETURNING id;
 	`
-	_, err := r.db.Exec(ctx, stmt, login, password)
+	err = r.db.QueryRow(ctx, stmt, login, password).Scan(&userID)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == pgerrcode.UniqueViolation {
-				return errs.ErrLoginExists
+				return userID, errs.ErrLoginExists
 			}
 			logger.Instance.Warn().Err(err).Msg("creating user")
-			return err
+			return userID, err
 		}
 	}
 	logger.Instance.Info().Msg("user created")
-	return nil
+	return userID, nil
 }
 
 func (r UsersRepository) ReadByLogin(ctx context.Context, login string) {}
