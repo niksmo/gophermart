@@ -18,6 +18,8 @@ func SetupApiRoutes(appServer server.HTTPServer) {
 		middleware.AllowJSON,
 	)
 
+	_ = middleware.Authorized(config.Auth.Key())
+
 	// Auth
 	authHandler := auth.NewHandler(
 		auth.NewService(config.Auth, repository.Users(database.DB)),

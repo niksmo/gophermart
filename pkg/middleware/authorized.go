@@ -15,7 +15,7 @@ var KeyUserID ctxKeyType
 
 type UserID int64
 
-func Authorized(key string) fiber.Handler {
+func Authorized(key []byte) fiber.Handler {
 	middleware := func(c *fiber.Ctx) error {
 		authorizationHeader := c.Get(fiber.HeaderAuthorization)
 		if authorizationHeader == "" {
@@ -26,7 +26,7 @@ func Authorized(key string) fiber.Handler {
 		}
 
 		tokenString := strings.TrimPrefix(authorizationHeader, bearerPrefix)
-		userID, err := jwt.Parse(tokenString, []byte(key))
+		userID, err := jwt.Parse(tokenString, key)
 		if err != nil {
 			return fiber.ErrUnauthorized
 		}
