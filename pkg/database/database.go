@@ -14,7 +14,14 @@ func Connect(DSN string, logger zerolog.Logger) {
 	DB, err = pgxpool.New(context.Background(), DSN)
 	if err != nil {
 		logger.Fatal().Err(err).Caller().Msg("unable to create connection pool")
+		return
 	}
+	err = DB.Ping(context.Background())
+	if err != nil {
+		logger.Fatal().Err(err).Caller().Msg("database not connected")
+		return
+	}
+	logger.Info().Msg("database connected")
 }
 
 func Migrate(stmt string, logger zerolog.Logger) {
