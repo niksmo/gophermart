@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/niksmo/gophermart/internal/logger"
+	"github.com/niksmo/gophermart/pkg/logger"
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 )
@@ -16,7 +16,7 @@ const (
 )
 
 type LoggerConfig struct {
-	Level zerolog.Level
+	level zerolog.Level
 }
 
 func NewLoggerConfig() LoggerConfig {
@@ -32,7 +32,7 @@ func NewLoggerConfig() LoggerConfig {
 			Logger()
 		if err == nil {
 			envLog.Info().Msg("use env value")
-			return LoggerConfig{Level: level}
+			return LoggerConfig{level: level}
 		}
 		envLog.Warn().Err(err).Send()
 	}
@@ -45,7 +45,7 @@ func NewLoggerConfig() LoggerConfig {
 			Logger()
 		if err == nil {
 			flagLog.Info().Msg("use flag value")
-			return LoggerConfig{Level: level}
+			return LoggerConfig{level: level}
 		}
 		flagLog.Warn().Err(err).Send()
 	}
@@ -55,5 +55,9 @@ func NewLoggerConfig() LoggerConfig {
 		Str("flag", logLevelFlagPrint).
 		Msg("use default value")
 
-	return LoggerConfig{Level: defaultLevel}
+	return LoggerConfig{level: defaultLevel}
+}
+
+func (config LoggerConfig) Level() zerolog.Level {
+	return config.level
 }

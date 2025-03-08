@@ -3,10 +3,16 @@ package config
 import (
 	"errors"
 
-	"github.com/niksmo/gophermart/internal/logger"
+	"github.com/niksmo/gophermart/pkg/logger"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
+
+var Server ServerConfig
+var Accrual AccrualConfig
+var Database DatabaseCofig
+var Auth AuthConfig
+var Logger LoggerConfig
 
 func Init() {
 	pflag.ErrHelp = errors.New("gophermart: help requested")
@@ -30,4 +36,10 @@ func Init() {
 			logger.Instance.Fatal().Err(err).Caller().Send()
 		}
 	}
+
+	Server = NewServerConfig()
+	Accrual = NewAccrualConfig()
+	Database = NewDatabaseConfig()
+	Auth = NewAuthConfig()
+	Logger = NewLoggerConfig()
 }

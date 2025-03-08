@@ -3,7 +3,7 @@ package config
 import (
 	"net/url"
 
-	"github.com/niksmo/gophermart/internal/logger"
+	"github.com/niksmo/gophermart/pkg/logger"
 	"github.com/spf13/viper"
 )
 
@@ -16,13 +16,13 @@ const (
 	accrualFlagPrint = "-" + accrualFlagShort
 )
 
-type AccrualAddrConfig struct {
+type AccrualConfig struct {
 	base      *url.URL
 	ordersGet string
 }
 
-func NewAccrualAddrConfig() AccrualAddrConfig {
-	var config AccrualAddrConfig
+func NewAccrualConfig() AccrualConfig {
+	var config AccrualConfig
 	config.ordersGet = "/api/orders"
 
 	flagValue := viper.GetString(accrualFlag)
@@ -64,6 +64,6 @@ func NewAccrualAddrConfig() AccrualAddrConfig {
 	return config
 }
 
-func (config *AccrualAddrConfig) GetOrdersReqURL(order string) string {
+func (config *AccrualConfig) GetOrdersReqURL(order string) string {
 	return config.base.JoinPath(config.ordersGet, order).String()
 }

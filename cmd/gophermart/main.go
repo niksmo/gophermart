@@ -5,41 +5,28 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/gofiber/contrib/fiberzerolog"
-	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/niksmo/gophermart/internal/api"
-	"github.com/niksmo/gophermart/internal/config"
-	"github.com/niksmo/gophermart/internal/logger"
-	"github.com/niksmo/gophermart/internal/repository"
+	"github.com/niksmo/gophermart/config"
+	"github.com/niksmo/gophermart/internal/router"
+	"github.com/niksmo/gophermart/migrations"
+	"github.com/niksmo/gophermart/pkg/database"
+	"github.com/niksmo/gophermart/pkg/logger"
 	"github.com/niksmo/gophermart/pkg/server"
-	"github.com/niksmo/gophermart/pkg/sqldb"
 )
 
 func main() {
 	stopCtx, _ := signal.NotifyContext(context.Background(), os.Interrupt)
 	logger.Init()
 	config.Init()
+	logger.SetLevel(config.Logger.Level())
+	database.Connect(config.Database.URI(), logger.Instance)
+	database.Migrate(migrations.Init, logger.Instance)
 
-	serverConfig := config.NewServerConfig()
-	_ = config.NewAccrualAddrConfig()
-	dbConfig := config.NewDatabaseConfig()
-	authConfig := config.NewAuthConfig()
-	loggerConfig := config.NewLoggerConfig()
-	logger.SetLevel(loggerConfig.Level)
-
-	appDB := sqldb.New("pgx", dbConfig.URI, logger.Instance)
-	repository.Init(appDB)
-
-	appServer := server.NewHTTPServer(serverConfig.Addr(), logger.Instance)
-	appServer.Use(fiberzerolog.New(fiberzerolog.Config{Logger: &logger.Instance}))
-
-	router := appServer.Group("/api")
-	api.SetUserPath(router, authConfig, appDB)
+	appServer := server.NewHTTPServer(config.Server.Addr(), logger.Instance)
+	router.SetupApiRoutes(appServer)
 
 	go appServer.Run()
-
 	<-stopCtx.Done()
 	logger.Instance.Info().Str("signal", "interrupt").Msg("shutting down gracefully")
 	appServer.Close()
-	appDB.Close()
+	database.Close()
 }

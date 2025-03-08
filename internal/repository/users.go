@@ -6,17 +6,17 @@ import (
 
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/niksmo/gophermart/internal/errs"
-	"github.com/niksmo/gophermart/internal/logger"
-	"github.com/niksmo/gophermart/pkg/sqldb"
+	"github.com/niksmo/gophermart/pkg/logger"
 )
 
 type UsersRepository struct {
-	dbService sqldb.DBService
+	db *pgxpool.Pool
 }
 
-func Users(dbService sqldb.DBService) UsersRepository {
-	return UsersRepository{dbService: dbService}
+func Users(db *pgxpool.Pool) UsersRepository {
+	return UsersRepository{db: db}
 }
 
 func (r UsersRepository) Create(
@@ -25,7 +25,7 @@ func (r UsersRepository) Create(
 	stmt := `
 	INSERT INTO users (login, password) VALUES ($1, $2);
 	`
-	_, err := r.dbService.ExecContext(ctx, stmt, login, password)
+	_, err := r.db.Exec(ctx, stmt, login, password)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {

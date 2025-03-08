@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/url"
 
-	"github.com/niksmo/gophermart/internal/logger"
+	"github.com/niksmo/gophermart/pkg/logger"
 	"github.com/spf13/viper"
 )
 
@@ -19,7 +19,7 @@ const (
 )
 
 type DatabaseCofig struct {
-	URI string
+	dsn string
 }
 
 func NewDatabaseConfig() (config DatabaseCofig) {
@@ -30,7 +30,7 @@ func NewDatabaseConfig() (config DatabaseCofig) {
 	if envValue != "" {
 		DSN, err := parseDSN(envValue)
 		if err == nil {
-			config = DatabaseCofig{URI: DSN}
+			config = DatabaseCofig{dsn: DSN}
 			return
 		}
 		configLogger.Warn().
@@ -43,7 +43,7 @@ func NewDatabaseConfig() (config DatabaseCofig) {
 	if flagValue != "" {
 		DSN, err := parseDSN(flagValue)
 		if err == nil {
-			config = DatabaseCofig{URI: DSN}
+			config = DatabaseCofig{dsn: DSN}
 			return
 		}
 		configLogger.Warn().
@@ -55,6 +55,10 @@ func NewDatabaseConfig() (config DatabaseCofig) {
 
 	configLogger.Fatal().Msg("URI not set")
 	return
+}
+
+func (config DatabaseCofig) URI() string {
+	return config.dsn
 }
 
 func parseDSN(value string) (string, error) {

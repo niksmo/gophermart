@@ -1,13 +1,19 @@
 package auth
 
+const tokenType = "Bearer"
+
 type SignupReqPayload struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
 }
 
 type SignupResPayload struct {
-	Type  string `json:"type"`
-	Token string `json:"token"`
+	TokenType  string `json:"tokenType"`
+	TokenValue string `json:"tokenValue"`
+}
+
+func NewSignupResPayload(tokenValue string) SignupResPayload {
+	return SignupResPayload{TokenType: tokenType, TokenValue: tokenValue}
 }
 
 type SigninReqPayload struct {
@@ -16,6 +22,10 @@ type SigninReqPayload struct {
 }
 
 type SigninResPayload struct {
-	Type  string `json:"type"`
-	Token string `json:"token"`
+	TokenType  string `json:"tokenType"`
+	TokenValue string `json:"tokenValue"`
+}
+
+func NewSigninResPayload(tokenValue string) SigninResPayload {
+	return SigninResPayload{TokenType: tokenType, TokenValue: tokenValue}
 }

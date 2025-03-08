@@ -3,7 +3,7 @@ package config
 import (
 	"net"
 
-	"github.com/niksmo/gophermart/internal/logger"
+	"github.com/niksmo/gophermart/pkg/logger"
 	"github.com/spf13/viper"
 )
 

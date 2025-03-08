@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 
-	"github.com/niksmo/gophermart/internal/config"
+	"github.com/niksmo/gophermart/config"
 	"github.com/niksmo/gophermart/internal/repository"
 	"golang.org/x/crypto/bcrypt"
 )
