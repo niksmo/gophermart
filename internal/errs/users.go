@@ -4,5 +4,5 @@ import "errors"
 
 var (
 	ErrLoginExists = errors.New("user login already in use")
-	ErrCredential  = errors.New("invalid login or password")
+	ErrCredentials = errors.New("invalid login or password")
 )

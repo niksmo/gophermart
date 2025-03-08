@@ -30,7 +30,7 @@ func (h AuthHandler) Register(c *fiber.Ctx) error {
 	)
 	if err != nil {
 		if errors.Is(err, errs.ErrLoginExists) {
-			return fiber.NewError(fiber.StatusConflict, errs.ErrLoginExists.Error())
+			return fiber.NewError(fiber.StatusConflict, err.Error())
 		}
 		return fiber.ErrInternalServerError
 	}
@@ -48,9 +48,16 @@ func (h AuthHandler) Login(c *fiber.Ctx) error {
 	// validate payload
 	// if err return fiber.Err
 
-	// h.service.AuthorizeUser(c.Context(), payload.Login, payload.Password)
-	// process errors
+	tokenString, err := h.service.AuthorizeUse(
+		c.Context(), payload.Login, payload.Password,
+	)
 
+	if err != nil {
+		if errors.Is(err, errs.ErrCredentials) {
+			return fiber.NewError(fiber.StatusUnauthorized, err.Error())
+		}
+		return fiber.ErrInternalServerError
+	}
 	c.Set(fiber.HeaderCacheControl, "no-store")
-	return c.JSON(NewSigninResPayload("<TokenValue>"))
+	return c.JSON(NewSigninResPayload(tokenString))
 }
