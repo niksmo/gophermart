@@ -34,7 +34,7 @@ func (s AuthService) RegisterUser(
 	return s.createToken(userID)
 }
 
-func (s AuthService) AuthorizeUse(
+func (s AuthService) AuthorizeUser(
 	ctx context.Context, login, password string,
 ) (string, error) {
 	userID, pwdHash, err := s.repository.ReadByLogin(ctx, login)

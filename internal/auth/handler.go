@@ -22,8 +22,10 @@ func (h AuthHandler) Register(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	// validate payload
-	// if err return fiber.Err
+	validationResult, ok := payload.Validate()
+	if !ok {
+		return c.Status(fiber.StatusBadRequest).JSON(validationResult)
+	}
 
 	tokenString, err := h.service.RegisterUser(
 		c.Context(), payload.Login, payload.Password,
@@ -45,10 +47,12 @@ func (h AuthHandler) Login(c *fiber.Ctx) error {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	// validate payload
-	// if err return fiber.Err
+	validationResult, ok := payload.Validate()
+	if !ok {
+		return c.Status(fiber.StatusBadRequest).JSON(validationResult)
+	}
 
-	tokenString, err := h.service.AuthorizeUse(
+	tokenString, err := h.service.AuthorizeUser(
 		c.Context(), payload.Login, payload.Password,
 	)
 
