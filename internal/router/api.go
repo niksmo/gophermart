@@ -5,6 +5,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/niksmo/gophermart/config"
 	"github.com/niksmo/gophermart/internal/auth"
+	"github.com/niksmo/gophermart/internal/order"
 	"github.com/niksmo/gophermart/internal/repository"
 	"github.com/niksmo/gophermart/pkg/database"
 	"github.com/niksmo/gophermart/pkg/logger"
@@ -15,19 +16,20 @@ import (
 func SetupApiRoutes(appServer server.HTTPServer) {
 	logging := fiberzerolog.New(fiberzerolog.Config{Logger: &logger.Instance})
 
-	api := appServer.Group(
-		"/api",
-		logging,
-		middleware.AllowJSON,
-		compress.New(),
-	)
+	api := appServer.Group("/api", logging, compress.New())
 
 	// Auth
 	authHandler := auth.NewHandler(
 		auth.NewService(config.Auth, repository.Users(database.DB)),
 	)
-	api.Post("/user/register", authHandler.Register)
-	api.Post("/user/login", authHandler.Login)
+	api.Post("/user/register", middleware.RequireJSON, authHandler.Register)
+	api.Post("/user/login", middleware.RequireJSON, authHandler.Login)
 
-	_ = middleware.Authorized(config.Auth.Key())
+	requireAuth := middleware.Authorized(config.Auth.Key())
+
+	// Order
+	orderHandler := order.NewHandler(
+		order.NewService(repository.Orders(database.DB)),
+	)
+	api.Post("/user/orders", requireAuth, orderHandler.UploadOrder)
 }

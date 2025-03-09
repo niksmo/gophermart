@@ -2,7 +2,7 @@ package middleware
 
 import "github.com/gofiber/fiber/v2"
 
-func AllowJSON(c *fiber.Ctx) error {
+func RequireJSON(c *fiber.Ctx) error {
 	if unsafeMethod(c.Method()) {
 		if c.Get(fiber.HeaderContentType) != fiber.MIMEApplicationJSON {
 			return fiber.ErrUnsupportedMediaType
