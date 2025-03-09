@@ -3,7 +3,7 @@ package config
 import (
 	"net/url"
 
-	"github.com/rs/zerolog"
+	"github.com/niksmo/gophermart/pkg/logger"
 	"github.com/spf13/viper"
 )
 
@@ -16,18 +16,18 @@ const (
 	accrualFlagPrint = "-" + accrualFlagShort
 )
 
-type AccrualAddrConfig struct {
+type AccrualConfig struct {
 	base      *url.URL
 	ordersGet string
 }
 
-func NewAccrualAddrConfig(logger zerolog.Logger) AccrualAddrConfig {
-	var config AccrualAddrConfig
+func NewAccrualConfig() AccrualConfig {
+	var config AccrualConfig
 	config.ordersGet = "/api/orders"
 
 	flagValue := viper.GetString(accrualFlag)
 	envValue := viper.GetString(accrualEnv)
-	log := logger.With().Str("config", "accrualAddress").Logger()
+	log := logger.Instance.With().Str("config", "accrual address").Logger()
 
 	if envValue != "" {
 		baseURL, err := url.ParseRequestURI(envValue)
@@ -43,25 +43,27 @@ func NewAccrualAddrConfig(logger zerolog.Logger) AccrualAddrConfig {
 		envLog.Warn().Err(err).Send()
 	}
 
-	baseURL, err := url.ParseRequestURI(flagValue)
-	flagLog := log.With().
-		Str("flag", accrualFlagPrint).
-		Str("value", flagValue).
-		Logger()
-	if err == nil {
-		config.base = baseURL
-		flagLog.Info().Msg("use flag value")
-		return config
+	if flagValue != accrualDefault {
+		baseURL, err := url.ParseRequestURI(flagValue)
+		flagLog := log.With().
+			Str("flag", accrualFlagPrint).
+			Str("value", flagValue).
+			Logger()
+		if err == nil {
+			config.base = baseURL
+			flagLog.Info().Msg("use flag value")
+			return config
+		}
+		flagLog.Warn().Err(err).Send()
 	}
-	flagLog.Warn().Err(err).Send()
 
-	baseURL, _ = url.ParseRequestURI(accrualDefault)
+	baseURL, _ := url.ParseRequestURI(accrualDefault)
 	config.base = baseURL
 	log.Info().Str("flag", accrualFlagPrint).Msg("use default value")
 
 	return config
 }
 
-func (config *AccrualAddrConfig) GetOrdersReqURL(order string) string {
+func (config *AccrualConfig) GetOrdersReqURL(order string) string {
 	return config.base.JoinPath(config.ordersGet, order).String()
 }

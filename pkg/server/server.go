@@ -28,7 +28,8 @@ func (s HTTPServer) Run() {
 func (s HTTPServer) Close() {
 	if err := s.ShutdownWithTimeout(shutdownTimeout); err != nil {
 		s.logger.Warn().Err(err).Msg("closing server connections")
-	} else {
-		s.logger.Info().Msg("server connection safely closed")
+		return
 	}
+	s.logger.Info().Msg("server connection safely closed")
+
 }

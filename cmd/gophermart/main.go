@@ -5,31 +5,28 @@ import (
 	"os"
 	"os/signal"
 
-	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/niksmo/gophermart/internal/config"
-	"github.com/niksmo/gophermart/internal/logger"
+	"github.com/niksmo/gophermart/config"
+	"github.com/niksmo/gophermart/internal/router"
+	"github.com/niksmo/gophermart/migrations"
+	"github.com/niksmo/gophermart/pkg/database"
+	"github.com/niksmo/gophermart/pkg/logger"
 	"github.com/niksmo/gophermart/pkg/server"
-	"github.com/niksmo/gophermart/pkg/sqldb"
 )
 
 func main() {
 	stopCtx, _ := signal.NotifyContext(context.Background(), os.Interrupt)
-	appLogger := logger.New()
-	config.Init(appLogger)
+	logger.Init()
+	config.Init()
+	logger.SetLevel(config.Logger.Level())
+	database.Connect(config.Database.URI(), logger.Instance)
+	database.Migrate(migrations.Init, logger.Instance)
 
-	addrConfig := config.NewAddressConfig(appLogger)
-	_ = config.NewAccrualAddrConfig(appLogger)
-	dbConfig := config.NewDatabaseConfig(appLogger)
-	loggerConfig := config.NewLoggerConfig(appLogger)
-	logger.SetLevel(loggerConfig.Level)
+	appServer := server.NewHTTPServer(config.Server.Addr(), logger.Instance)
+	router.SetupApiRoutes(appServer)
 
-	appDB := sqldb.New("pgx", dbConfig.URI, appLogger)
-
-	appServer := server.NewHTTPServer(addrConfig.Addr(), appLogger)
 	go appServer.Run()
-
 	<-stopCtx.Done()
-	appLogger.Info().Str("signal", "interrupt").Msg("shutting down gracefully")
+	logger.Instance.Info().Str("signal", "interrupt").Msg("shutting down gracefully")
 	appServer.Close()
-	appDB.Close()
+	database.Close()
 }

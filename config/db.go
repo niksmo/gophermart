@@ -4,7 +4,7 @@ import (
 	"errors"
 	"net/url"
 
-	"github.com/rs/zerolog"
+	"github.com/niksmo/gophermart/pkg/logger"
 	"github.com/spf13/viper"
 )
 
@@ -19,42 +19,48 @@ const (
 )
 
 type DatabaseCofig struct {
-	URI string
+	dsn string
 }
 
-func NewDatabaseConfig(logger zerolog.Logger) (config DatabaseCofig) {
+func NewDatabaseConfig() (config DatabaseCofig) {
 	flagValue := viper.GetString(dbURIFlag)
 	envValue := viper.GetString(dbURIEnv)
-	configLogger := logger.With().Str("config", "database").Logger()
+	log := logger.Instance.With().Str("config", "database").Logger()
 
 	if envValue != "" {
 		DSN, err := parseDSN(envValue)
-		if err == nil {
-			config = DatabaseCofig{URI: DSN}
-			return
-		}
-		configLogger.Warn().
+		envLog := log.With().
 			Str("env", dbURIEnv).
 			Str("value", envValue).
-			Err(err).
-			Send()
+			Logger()
+		if err == nil {
+			config = DatabaseCofig{dsn: DSN}
+			envLog.Info().Msg("use env value")
+			return
+		}
+		envLog.Warn().Err(err).Send()
 	}
 
 	if flagValue != "" {
 		DSN, err := parseDSN(flagValue)
-		if err == nil {
-			config = DatabaseCofig{URI: DSN}
-			return
-		}
-		configLogger.Warn().
+		flagLog := log.With().
 			Str("flag", dbURIFlagPrint).
 			Str("value", flagValue).
-			Err(err).
-			Send()
+			Logger()
+		if err == nil {
+			config = DatabaseCofig{dsn: DSN}
+			flagLog.Info().Msg("use flag value")
+			return
+		}
+		flagLog.Warn().Err(err).Send()
 	}
 
-	configLogger.Fatal().Msg("URI not set")
+	log.Fatal().Msg("URI not set")
 	return
+}
+
+func (config DatabaseCofig) URI() string {
+	return config.dsn
 }
 
 func parseDSN(value string) (string, error) {
