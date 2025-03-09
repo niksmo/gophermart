@@ -16,19 +16,19 @@ func NewHandler(service AuthService) AuthHandler {
 }
 
 func (h AuthHandler) Register(c *fiber.Ctx) error {
-	var payload SignupReqPayload
-	err := c.BodyParser(&payload)
+	var reqPayload SignupReqPayload
+	err := c.BodyParser(&reqPayload)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	validationResult, ok := payload.Validate()
+	validationResult, ok := reqPayload.Validate()
 	if !ok {
 		return c.Status(fiber.StatusBadRequest).JSON(validationResult)
 	}
 
 	tokenString, err := h.service.RegisterUser(
-		c.Context(), payload.Login, payload.Password,
+		c.Context(), reqPayload.Login, reqPayload.Password,
 	)
 	if err != nil {
 		if errors.Is(err, errs.ErrLoginExists) {
@@ -36,8 +36,10 @@ func (h AuthHandler) Register(c *fiber.Ctx) error {
 		}
 		return fiber.ErrInternalServerError
 	}
+	resPayload := NewResPayload(tokenString)
 	c.Set(fiber.HeaderCacheControl, "no-store")
-	return c.JSON(NewSignupResPayload(tokenString))
+	c.Set(fiber.HeaderAuthorization, resPayload.String())
+	return c.JSON(resPayload)
 }
 
 func (h AuthHandler) Login(c *fiber.Ctx) error {
@@ -62,6 +64,8 @@ func (h AuthHandler) Login(c *fiber.Ctx) error {
 		}
 		return fiber.ErrInternalServerError
 	}
+	resPayload := NewResPayload(tokenString)
 	c.Set(fiber.HeaderCacheControl, "no-store")
-	return c.JSON(NewSigninResPayload(tokenString))
+	c.Set(fiber.HeaderAuthorization, resPayload.String())
+	return c.JSON(resPayload)
 }

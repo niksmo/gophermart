@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -22,6 +23,19 @@ var (
 	validPassword = regexp.MustCompile(`^[\d\w\-!@#$%^&*()_+|\\\[\]{}'";:\/?>.<,=]+$`)
 )
 
+type ResPayload struct {
+	TokenType  string `json:"tokenType"`
+	TokenValue string `json:"tokenValue"`
+}
+
+func NewResPayload(tokenValue string) ResPayload {
+	return ResPayload{TokenType: tokenType, TokenValue: tokenValue}
+}
+
+func (resPayload ResPayload) String() string {
+	return fmt.Sprintf("%s %s", resPayload.TokenType, resPayload.TokenValue)
+}
+
 type SignupReqPayload struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
@@ -31,15 +45,6 @@ func (signupReq SignupReqPayload) Validate() (result InvalidValidationData, ok b
 	return validatePayload(signupReq.Login, signupReq.Password)
 }
 
-type SignupResPayload struct {
-	TokenType  string `json:"tokenType"`
-	TokenValue string `json:"tokenValue"`
-}
-
-func NewSignupResPayload(tokenValue string) SignupResPayload {
-	return SignupResPayload{TokenType: tokenType, TokenValue: tokenValue}
-}
-
 type SigninReqPayload struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
@@ -47,15 +52,6 @@ type SigninReqPayload struct {
 
 func (signinReq SigninReqPayload) Validate() (result InvalidValidationData, ok bool) {
 	return validatePayload(signinReq.Login, signinReq.Password)
-}
-
-type SigninResPayload struct {
-	TokenType  string `json:"tokenType"`
-	TokenValue string `json:"tokenValue"`
-}
-
-func NewSigninResPayload(tokenValue string) SigninResPayload {
-	return SigninResPayload{TokenType: tokenType, TokenValue: tokenValue}
 }
 
 type InvalidValidationData struct {
