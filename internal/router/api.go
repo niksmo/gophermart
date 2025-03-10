@@ -5,6 +5,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/niksmo/gophermart/config"
 	"github.com/niksmo/gophermart/internal/auth"
+	"github.com/niksmo/gophermart/internal/bonuses"
 	"github.com/niksmo/gophermart/internal/orders"
 	"github.com/niksmo/gophermart/internal/users"
 	"github.com/niksmo/gophermart/pkg/database"
@@ -20,7 +21,11 @@ func SetupApiRoutes(appServer server.HTTPServer) {
 
 	// Auth
 	authHandler := auth.NewHandler(
-		auth.NewService(config.Auth, users.NewRepository(database.DB)),
+		auth.NewService(
+			config.Auth,
+			users.NewRepository(database.DB),
+			bonuses.NewRepository(database.DB),
+		),
 	)
 	api.Post("/user/register", middleware.RequireJSON, authHandler.Register)
 	api.Post("/user/login", middleware.RequireJSON, authHandler.Login)

@@ -22,12 +22,12 @@ func NewRepository(db *pgxpool.Pool) UsersRepository {
 
 func (r UsersRepository) Create(
 	ctx context.Context, login string, password string,
-) (int64, error) {
+) (int32, error) {
 	stmt := `
 	INSERT INTO users (login, password) VALUES ($1, $2)
 	RETURNING id;
 	`
-	var userID int64
+	var userID int32
 	err := r.db.QueryRow(ctx, stmt, login, password).Scan(&userID)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -42,12 +42,12 @@ func (r UsersRepository) Create(
 
 func (r UsersRepository) ReadByLogin(
 	ctx context.Context, login string,
-) (int64, string, error) {
+) (int32, string, error) {
 	stmt := `
 	SELECT id, password FROM users WHERE login=$1;
 	`
 	var (
-		userID  int64
+		userID  int32
 		pwdHash string
 	)
 	err := r.db.QueryRow(ctx, stmt, login).Scan(&userID, &pwdHash)
