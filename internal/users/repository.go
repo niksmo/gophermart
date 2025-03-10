@@ -32,12 +32,11 @@ func (r UsersRepository) Create(
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-			return -1, errs.ErrLoginExists
+			return -1, errs.ErrUserLoginExists
 		}
 		logger.Instance.Warn().Err(err).Msg("creating user")
 		return -1, err
 	}
-	logger.Instance.Info().Msg("user created")
 	return userID, nil
 }
 
@@ -54,12 +53,10 @@ func (r UsersRepository) ReadByLogin(
 	err := r.db.QueryRow(ctx, stmt, login).Scan(&userID, &pwdHash)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return -1, "", errs.ErrCredentials
+			return -1, "", errs.ErrUserCredentials
 		}
 		logger.Instance.Warn().Err(err).Msg("reading by login")
 		return -1, "", err
 	}
 	return userID, pwdHash, nil
 }
-
-func (r UsersRepository) ReadByID(ctx context.Context, userID int64) {}

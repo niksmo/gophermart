@@ -7,6 +7,7 @@ import (
 	"github.com/niksmo/gophermart/internal/errs"
 	"github.com/niksmo/gophermart/internal/users"
 	"github.com/niksmo/gophermart/pkg/jwt"
+	"github.com/niksmo/gophermart/pkg/logger"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -24,6 +25,7 @@ func (s AuthService) RegisterUser(
 ) (string, error) {
 	pwdHash, err := bcrypt.GenerateFromPassword([]byte(password), s.authConfig.Cost())
 	if err != nil {
+		logger.Instance.Error().Err(err).Caller().Send()
 		return "", err
 	}
 	userID, err := s.repository.Create(ctx, login, string(pwdHash))
@@ -43,7 +45,7 @@ func (s AuthService) AuthorizeUser(
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(pwdHash), []byte(password))
 	if err != nil {
-		return "", errs.ErrCredentials
+		return "", errs.ErrUserCredentials
 	}
 
 	return s.createToken(userID)
@@ -54,6 +56,7 @@ func (s AuthService) createToken(userID int64) (string, error) {
 		userID, s.authConfig.Key(), s.authConfig.JWTLifetime(),
 	)
 	if err != nil {
+		logger.Instance.Error().Err(err).Caller().Send()
 		return "", err
 	}
 

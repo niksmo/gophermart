@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/niksmo/gophermart/internal/errs"
+	"github.com/niksmo/gophermart/pkg/logger"
 )
 
 const tokenType = "Bearer "
@@ -33,9 +34,10 @@ func (h AuthHandler) Register(c *fiber.Ctx) error {
 		c.Context(), payload.Login, payload.Password,
 	)
 	if err != nil {
-		if errors.Is(err, errs.ErrLoginExists) {
+		if errors.Is(err, errs.ErrUserLoginExists) {
 			return fiber.NewError(fiber.StatusConflict, err.Error())
 		}
+		logger.Instance.Error().Err(err).Caller().Send()
 		return fiber.ErrInternalServerError
 	}
 	return authorize(c, tokenString)
@@ -58,9 +60,10 @@ func (h AuthHandler) Login(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		if errors.Is(err, errs.ErrCredentials) {
+		if errors.Is(err, errs.ErrUserCredentials) {
 			return fiber.NewError(fiber.StatusUnauthorized, err.Error())
 		}
+		logger.Instance.Error().Err(err).Caller().Send()
 		return fiber.ErrInternalServerError
 	}
 	return authorize(c, tokenString)

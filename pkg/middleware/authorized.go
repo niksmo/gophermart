@@ -15,8 +15,8 @@ var KeyUserID ctxKeyType
 
 type UserID int64
 
-func (userID UserID) Int64() int64 {
-	return int64(userID)
+func (userID UserID) Int32() int32 {
+	return int32(userID)
 }
 
 func Authorized(key []byte) fiber.Handler {
@@ -36,4 +36,9 @@ func Authorized(key []byte) fiber.Handler {
 	}
 
 	return middleware
+}
+
+func GetUserID(c *fiber.Ctx) (userID UserID, ok bool) {
+	userID, ok = c.Locals(KeyUserID).(UserID)
+	return
 }

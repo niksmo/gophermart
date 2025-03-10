@@ -15,13 +15,27 @@ func NewService(repository OrdersRepository) OrdersService {
 	return OrdersService{repository: repository}
 }
 
-func (s OrdersService) UploadOrder(ctx context.Context, userID int64, orderNumber int64) error {
+func (s OrdersService) UploadOrder(ctx context.Context, userID int32, orderNumber int64) error {
 	err := s.repository.Create(ctx, userID, orderNumber)
 	if err != nil {
 		if errors.Is(err, errs.ErrOrderUploaded) {
-			s.repository.ReadByOrderNumber(ctx, orderNumber)
+			return s.processUploadConflict(ctx, userID, orderNumber)
 		}
 		return err
 	}
 	return nil
+}
+
+func (s OrdersService) processUploadConflict(
+	ctx context.Context, userID int32, orderNumber int64,
+) error {
+	order, err := s.repository.ReadByOrderNumber(ctx, orderNumber)
+	if err != nil {
+		return err
+	}
+	if order.OwnerID == userID {
+		return errs.ErrOrderUploadedByUser
+	}
+	return errs.ErrOrderUploadedByOther
+
 }

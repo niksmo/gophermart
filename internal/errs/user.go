@@ -3,12 +3,12 @@ package errs
 import "errors"
 
 var (
-	ErrLoginLength  = errors.New("length min 1 and max 60")
-	ErrLoginInvalid = errors.New("allow latin charecters, numbers, dash, underlining")
+	ErrUserLoginLength  = errors.New("length min 1 and max 60")
+	ErrUserLoginInvalid = errors.New("allow latin charecters, numbers, dash, underlining")
 
-	ErrPasswordLength  = errors.New("length min 1 and max 60")
-	ErrPasswordInvalid = errors.New("allow latin charecters, special symbols, without spaces")
+	ErrUserPasswordLength  = errors.New("length min 1 and max 60")
+	ErrUserPasswordInvalid = errors.New("allow latin charecters, special symbols, without spaces")
 
-	ErrLoginExists = errors.New("user login already in use")
-	ErrCredentials = errors.New("invalid login or password")
+	ErrUserLoginExists = errors.New("user login already in use")
+	ErrUserCredentials = errors.New("invalid login or password")
 )

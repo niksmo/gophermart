@@ -56,35 +56,35 @@ func validateScheme(
 }
 
 func validateLogin(login string) []string {
-	var sErr []string
+	var resultSlice []string
 	login = strings.TrimSpace(login)
 	length := len(login)
 	if length < minLoginLen || length > maxLoginLen {
-		sErr = append(sErr, errs.ErrLoginLength.Error())
+		resultSlice = append(resultSlice, errs.ErrUserLoginLength.Error())
 	}
 	if !validLogin.MatchString(login) {
-		sErr = append(
-			sErr, errs.ErrLoginInvalid.Error(),
+		resultSlice = append(
+			resultSlice, errs.ErrUserLoginInvalid.Error(),
 		)
 	}
-	if len(sErr) != 0 {
-		return sErr
+	if len(resultSlice) != 0 {
+		return resultSlice
 	}
 	return nil
 }
 
 func validatePassword(password string) []string {
-	var sErr []string
+	var resultSlice []string
 	password = strings.TrimSpace(password)
 	length := len(password)
 	if length < minPasswordLen || length > maxPasswordLen {
-		sErr = append(sErr, errs.ErrPasswordLength.Error())
+		resultSlice = append(resultSlice, errs.ErrUserPasswordLength.Error())
 	}
 	if !validPassword.MatchString(password) {
-		sErr = append(sErr, errs.ErrPasswordInvalid.Error())
+		resultSlice = append(resultSlice, errs.ErrUserPasswordInvalid.Error())
 	}
-	if len(sErr) != 0 {
-		return sErr
+	if len(resultSlice) != 0 {
+		return resultSlice
 	}
 	return nil
 }
