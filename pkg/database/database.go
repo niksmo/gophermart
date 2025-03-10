@@ -27,7 +27,7 @@ func Connect(DSN string, logger zerolog.Logger) {
 func Migrate(stmt string, logger zerolog.Logger) {
 	tag, err := DB.Exec(context.Background(), stmt)
 	if err != nil {
-		logger.Fatal().Err(err).Caller()
+		logger.Fatal().Err(err).Caller().Send()
 		return
 	}
 	logger.Info().Str("tag", tag.String()).Msg("database migration")

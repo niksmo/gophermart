@@ -5,7 +5,10 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/niksmo/gophermart/internal/errs"
+	"github.com/niksmo/gophermart/pkg/logger"
 )
+
+const tokenType = "Bearer "
 
 type AuthHandler struct {
 	service AuthService
@@ -16,7 +19,7 @@ func NewHandler(service AuthService) AuthHandler {
 }
 
 func (h AuthHandler) Register(c *fiber.Ctx) error {
-	var payload SignupReqPayload
+	var payload SignupRequestScheme
 	err := c.BodyParser(&payload)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
@@ -31,17 +34,17 @@ func (h AuthHandler) Register(c *fiber.Ctx) error {
 		c.Context(), payload.Login, payload.Password,
 	)
 	if err != nil {
-		if errors.Is(err, errs.ErrLoginExists) {
+		if errors.Is(err, errs.ErrUserLoginExists) {
 			return fiber.NewError(fiber.StatusConflict, err.Error())
 		}
+		logger.Instance.Error().Err(err).Caller().Send()
 		return fiber.ErrInternalServerError
 	}
-	c.Set(fiber.HeaderCacheControl, "no-store")
-	return c.JSON(NewSignupResPayload(tokenString))
+	return authorize(c, tokenString)
 }
 
 func (h AuthHandler) Login(c *fiber.Ctx) error {
-	var payload SigninReqPayload
+	var payload SigninRequestScheme
 	err := c.BodyParser(&payload)
 	if err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
@@ -57,11 +60,17 @@ func (h AuthHandler) Login(c *fiber.Ctx) error {
 	)
 
 	if err != nil {
-		if errors.Is(err, errs.ErrCredentials) {
+		if errors.Is(err, errs.ErrUserCredentials) {
 			return fiber.NewError(fiber.StatusUnauthorized, err.Error())
 		}
+		logger.Instance.Error().Err(err).Caller().Send()
 		return fiber.ErrInternalServerError
 	}
+	return authorize(c, tokenString)
+}
+
+func authorize(c *fiber.Ctx, tokenString string) error {
 	c.Set(fiber.HeaderCacheControl, "no-store")
-	return c.JSON(NewSigninResPayload(tokenString))
+	c.Set(fiber.HeaderAuthorization, tokenType+tokenString)
+	return c.SendStatus(fiber.StatusOK)
 }

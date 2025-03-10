@@ -9,24 +9,24 @@ import (
 
 type Claims struct {
 	jwt.RegisteredClaims
-	UserID int64 `json:"userID"`
+	UserID int32 `json:"userID"`
 }
 
-func newClaims(userID int64, lifetime time.Duration) Claims {
+func newClaims(userID int32, lifetime time.Duration) Claims {
 	expiresAt := jwt.NewNumericDate(time.Now().Add(lifetime))
 	registeredClaims := jwt.RegisteredClaims{ExpiresAt: expiresAt}
 	return Claims{registeredClaims, userID}
 }
 
 func Create(
-	ID int64, key []byte, lifetime time.Duration,
+	ID int32, key []byte, lifetime time.Duration,
 ) (tokenString string, err error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, newClaims(ID, lifetime))
 	tokenString, err = token.SignedString(key)
 	return
 }
 
-func Parse(tokenString string, key []byte) (int64, error) {
+func Parse(tokenString string, key []byte) (int32, error) {
 	var claims Claims
 	_, err := jwt.ParseWithClaims(tokenString, &claims, keyFunc(key))
 	return claims.UserID, err
