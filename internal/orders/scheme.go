@@ -45,7 +45,7 @@ func isValidLuhn(number int64) bool {
 type OrderScheme struct {
 	ID         int32     `json:"-"`
 	OwnerID    int32     `json:"-"`
-	Number     int64     `json:"order"`
+	Number     int64     `json:"number"`
 	Status     string    `json:"status"`
 	Accrual    float64   `json:"accrual,omitempty"`
 	UploadedAt time.Time `json:"uploaded_at"`

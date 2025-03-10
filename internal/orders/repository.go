@@ -3,8 +3,10 @@ package orders
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/niksmo/gophermart/internal/errs"
@@ -64,4 +66,55 @@ func (r OrdersRepository) ReadByOrderNumber(
 		return
 	}
 	return
+}
+
+func (r OrdersRepository) ReadListByUser(
+	ctx context.Context, userID int32, orders []OrderScheme,
+) ([]OrderScheme, error) {
+	stmt := `
+	WITH certain_order AS (
+	    SELECT id, user_id, status_id, number, accrual, uploaded_at
+		FROM orders
+		WHERE user_id = $1
+	)
+	SELECT o.id, o.user_id, o.number, s.name AS status, o.accrual, o.uploaded_at
+	FROM certain_order AS o
+	JOIN order_status AS s ON o.status_id = s.id
+	ORDER BY o.uploaded_at DESC;
+	`
+
+	rows, err := r.db.Query(ctx, stmt, userID)
+	if err != nil {
+		logger.Instance.Error().Err(err).Caller().Msg("reading order list by user")
+		return orders, err
+	}
+	var (
+		id         int32
+		ownerID    int32
+		number     int64
+		status     string
+		accrual    float64
+		uploadetAt time.Time
+	)
+
+	scanRowFn := func() error {
+		orders = append(
+			orders,
+			OrderScheme{id, ownerID, number, status, accrual, uploadetAt},
+		)
+		return nil
+	}
+
+	_, err = pgx.ForEachRow(
+		rows,
+		[]any{&id, &ownerID, &number, &status, &accrual, &uploadetAt},
+		scanRowFn,
+	)
+
+	if err != nil {
+		logger.Instance.Error().Err(err).Caller().Msg("reading order list by user")
+		return orders, err
+	}
+
+	return orders, nil
 }

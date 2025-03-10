@@ -25,11 +25,12 @@ func SetupApiRoutes(appServer server.HTTPServer) {
 	api.Post("/user/register", middleware.RequireJSON, authHandler.Register)
 	api.Post("/user/login", middleware.RequireJSON, authHandler.Login)
 
-	requireAuth := middleware.Authorized(config.Auth.Key())
+	authorized := api.Group("", middleware.Authorized(config.Auth.Key()))
 
-	// Order
+	// Orders
 	orderHandler := orders.NewHandler(
 		orders.NewService(orders.NewRepository(database.DB)),
 	)
-	api.Post("/user/orders", requireAuth, orderHandler.UploadOrder)
+	authorized.Post("/user/orders", orderHandler.UploadOrder)
+	authorized.Get("/user/orders", orderHandler.GetOrders)
 }

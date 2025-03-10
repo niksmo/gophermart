@@ -17,7 +17,7 @@ func NewHandler(service OrdersService) OrdersHandler {
 	return OrdersHandler{service: service}
 }
 
-func (handler OrdersHandler) UploadOrder(c *fiber.Ctx) error {
+func (h OrdersHandler) UploadOrder(c *fiber.Ctx) error {
 	payload := OrderNumberScheme(c.Body())
 	orderNumber, err := payload.Validate()
 	if err != nil {
@@ -32,13 +32,13 @@ func (handler OrdersHandler) UploadOrder(c *fiber.Ctx) error {
 		}
 	}
 
-	userID, ok := middleware.GetUserID(c)
-	if !ok {
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
 		logger.Instance.Error().Err(err).Caller().Send()
 		return fiber.ErrInternalServerError
 	}
 
-	err = handler.service.UploadOrder(
+	err = h.service.UploadOrder(
 		c.Context(), userID.Int32(), orderNumber,
 	)
 	if err != nil {
@@ -53,4 +53,23 @@ func (handler OrdersHandler) UploadOrder(c *fiber.Ctx) error {
 		}
 	}
 	return c.SendStatus(fiber.StatusAccepted)
+}
+
+func (h OrdersHandler) GetOrders(c *fiber.Ctx) error {
+	orders := make([]OrderScheme, 0)
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		logger.Instance.Error().Err(err).Caller().Send()
+		return fiber.ErrInternalServerError
+	}
+
+	orders, err = h.service.GetUserOrders(c.Context(), userID.Int32(), orders)
+	if err != nil {
+		if errors.Is(err, errs.ErrOrdersNoUploads) {
+			return fiber.NewError(fiber.StatusNoContent, err.Error())
+		}
+		logger.Instance.Error().Err(err).Caller().Send()
+		return fiber.ErrInternalServerError
+	}
+	return c.JSON(orders)
 }

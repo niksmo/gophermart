@@ -26,6 +26,20 @@ func (s OrdersService) UploadOrder(ctx context.Context, userID int32, orderNumbe
 	return nil
 }
 
+func (s OrdersService) GetUserOrders(
+	ctx context.Context, userID int32, orders []OrderScheme,
+) ([]OrderScheme, error) {
+	orders, err := s.repository.ReadListByUser(ctx, userID, orders)
+	if err != nil {
+		return orders, err
+	}
+	if len(orders) == 0 {
+		return orders, errs.ErrOrdersNoUploads
+	}
+
+	return orders, nil
+}
+
 func (s OrdersService) processUploadConflict(
 	ctx context.Context, userID int32, orderNumber int64,
 ) error {

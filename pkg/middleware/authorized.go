@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -38,7 +39,10 @@ func Authorized(key []byte) fiber.Handler {
 	return middleware
 }
 
-func GetUserID(c *fiber.Ctx) (userID UserID, ok bool) {
-	userID, ok = c.Locals(KeyUserID).(UserID)
-	return
+func GetUserID(c *fiber.Ctx) (UserID, error) {
+	userID, ok := c.Locals(KeyUserID).(UserID)
+	if !ok {
+		return userID, errors.New("extract userID from fiber.Ctx.Locals")
+	}
+	return userID, nil
 }
