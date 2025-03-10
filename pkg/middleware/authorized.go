@@ -15,12 +15,13 @@ var KeyUserID ctxKeyType
 
 type UserID int64
 
+func (userID UserID) Int64() int64 {
+	return int64(userID)
+}
+
 func Authorized(key []byte) fiber.Handler {
 	middleware := func(c *fiber.Ctx) error {
 		authorizationHeader := c.Get(fiber.HeaderAuthorization)
-		if authorizationHeader == "" {
-			return fiber.ErrUnauthorized
-		}
 		if !strings.HasPrefix(authorizationHeader, bearerPrefix) {
 			return fiber.ErrUnauthorized
 		}

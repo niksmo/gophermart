@@ -5,17 +5,17 @@ import (
 
 	"github.com/niksmo/gophermart/config"
 	"github.com/niksmo/gophermart/internal/errs"
-	"github.com/niksmo/gophermart/internal/repository"
+	"github.com/niksmo/gophermart/internal/users"
 	"github.com/niksmo/gophermart/pkg/jwt"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthService struct {
 	authConfig config.AuthConfig
-	repository repository.UsersRepository
+	repository users.UsersRepository
 }
 
-func NewService(authConfig config.AuthConfig, repository repository.UsersRepository) AuthService {
+func NewService(authConfig config.AuthConfig, repository users.UsersRepository) AuthService {
 	return AuthService{authConfig: authConfig, repository: repository}
 }
 

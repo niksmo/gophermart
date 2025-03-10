@@ -1,4 +1,4 @@
-package order
+package orders
 
 import (
 	"strconv"
@@ -6,17 +6,13 @@ import (
 	"github.com/niksmo/gophermart/internal/errs"
 )
 
-type UploadOrderReqPayload string
+type OrderNumberScheme []byte
 
-func (payload UploadOrderReqPayload) Validate() (number int64, err error) {
-	number, err = strconv.ParseInt(string(payload), 10, 64)
-	if err != nil {
+func (orderNumber OrderNumberScheme) Validate() (number int64, err error) {
+	number, err = strconv.ParseInt(string(orderNumber), 10, 64)
+	if err != nil || !isValidLuhn(number) {
 		return -1, errs.ErrInvalidOrderNum
 	}
-	if !isValidLuhn(number) {
-		return -1, errs.ErrInvalidOrderNum
-	}
-
 	return number, nil
 }
 

@@ -1,4 +1,4 @@
-package repository
+package users
 
 import (
 	"context"
@@ -16,7 +16,7 @@ type UsersRepository struct {
 	db *pgxpool.Pool
 }
 
-func Users(db *pgxpool.Pool) UsersRepository {
+func NewRepository(db *pgxpool.Pool) UsersRepository {
 	return UsersRepository{db: db}
 }
 
@@ -31,13 +31,11 @@ func (r UsersRepository) Create(
 	err := r.db.QueryRow(ctx, stmt, login, password).Scan(&userID)
 	if err != nil {
 		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == pgerrcode.UniqueViolation {
-				return -1, errs.ErrLoginExists
-			}
-			logger.Instance.Warn().Err(err).Msg("creating user")
-			return -1, err
+		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+			return -1, errs.ErrLoginExists
 		}
+		logger.Instance.Warn().Err(err).Msg("creating user")
+		return -1, err
 	}
 	logger.Instance.Info().Msg("user created")
 	return userID, nil

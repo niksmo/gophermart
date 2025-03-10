@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 
@@ -9,8 +8,6 @@ import (
 )
 
 const (
-	tokenType = "Bearer"
-
 	minLoginLen = 1
 	maxLoginLen = 60
 
@@ -23,35 +20,21 @@ var (
 	validPassword = regexp.MustCompile(`^[\d\w\-!@#$%^&*()_+|\\\[\]{}'";:\/?>.<,=]+$`)
 )
 
-type ResPayload struct {
-	TokenType  string `json:"tokenType"`
-	TokenValue string `json:"tokenValue"`
-}
-
-func NewResPayload(tokenValue string) ResPayload {
-	return ResPayload{TokenType: tokenType, TokenValue: tokenValue}
-}
-
-func (resPayload ResPayload) String() string {
-	return fmt.Sprintf("%s %s", resPayload.TokenType, resPayload.TokenValue)
-}
-
-type SignupReqPayload struct {
+type BaseRequestScheme struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
 }
 
-func (signupReq SignupReqPayload) Validate() (result InvalidValidationData, ok bool) {
-	return validatePayload(signupReq.Login, signupReq.Password)
+func (scheme BaseRequestScheme) Validate() (result InvalidValidationData, ok bool) {
+	return validateScheme(scheme.Login, scheme.Password)
 }
 
-type SigninReqPayload struct {
-	Login    string `json:"login"`
-	Password string `json:"password"`
+type SignupRequestScheme struct {
+	BaseRequestScheme
 }
 
-func (signinReq SigninReqPayload) Validate() (result InvalidValidationData, ok bool) {
-	return validatePayload(signinReq.Login, signinReq.Password)
+type SigninRequestScheme struct {
+	BaseRequestScheme
 }
 
 type InvalidValidationData struct {
@@ -59,7 +42,7 @@ type InvalidValidationData struct {
 	Password []string `json:"password,omitempty"`
 }
 
-func validatePayload(
+func validateScheme(
 	login, password string,
 ) (result InvalidValidationData, ok bool) {
 	result.Login = validateLogin(login)
