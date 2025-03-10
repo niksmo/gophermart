@@ -21,7 +21,7 @@ func NewRepository(db *pgxpool.Pool) OrdersRepository {
 	return OrdersRepository{db: db}
 }
 
-func (r OrdersRepository) Create(ctx context.Context, userID int32, orderNumber int64) error {
+func (r OrdersRepository) Create(ctx context.Context, userID int32, orderNumber string) error {
 	stmt := `
 	INSERT INTO orders (user_id, number) VALUES ($1, $2);
 	`
@@ -40,7 +40,7 @@ func (r OrdersRepository) Create(ctx context.Context, userID int32, orderNumber 
 }
 
 func (r OrdersRepository) ReadByOrderNumber(
-	ctx context.Context, orderNumber int64,
+	ctx context.Context, orderNumber string,
 ) (order OrderScheme, err error) {
 	stmt := `
 	WITH certain_order AS (
@@ -91,7 +91,7 @@ func (r OrdersRepository) ReadListByUser(
 	var (
 		id         int32
 		ownerID    int32
-		number     int64
+		number     string
 		status     string
 		accrual    float64
 		uploadetAt time.Time

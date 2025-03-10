@@ -38,9 +38,7 @@ func (h OrdersHandler) UploadOrder(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	err = h.service.UploadOrder(
-		c.Context(), userID.Int32(), orderNumber,
-	)
+	err = h.service.UploadOrder(c.Context(), userID.Int32(), orderNumber)
 	if err != nil {
 		switch {
 		case errors.Is(err, errs.ErrOrderUploadedByUser):

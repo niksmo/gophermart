@@ -42,7 +42,7 @@ func Authorized(key []byte) fiber.Handler {
 func GetUserID(c *fiber.Ctx) (UserID, error) {
 	userID, ok := c.Locals(KeyUserID).(UserID)
 	if !ok {
-		return userID, errors.New("extract userID from fiber.Ctx.Locals")
+		return userID, errors.New("extracting userID from fiber.Ctx.Locals")
 	}
 	return userID, nil
 }

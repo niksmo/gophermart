@@ -9,23 +9,24 @@ import (
 
 type OrderNumberScheme []byte
 
-func (orderNumber OrderNumberScheme) Validate() (number int64, err error) {
-	number, err = strconv.ParseInt(string(orderNumber), 10, 64)
+func (orderNumber OrderNumberScheme) Validate() (string, error) {
+	numberString := string(orderNumber)
+	number, err := strconv.Atoi(numberString)
 	if err != nil {
-		return -1, errs.ErrOrderInvalidFormat
+		return "", errs.ErrOrderInvalidFormat
 	}
 	if !isValidLuhn(number) {
-		return -1, errs.ErrOrderInvalidNum
+		return "", errs.ErrOrderInvalidNum
 	}
-	return number, nil
+	return numberString, nil
 }
 
-func isValidLuhn(number int64) bool {
+func isValidLuhn(number int) bool {
 	if number < 0 {
 		return false
 	}
 
-	var sum int64
+	var sum int
 	var isEvenOrder bool
 	for number > 0 {
 		cur := number % 10
@@ -45,7 +46,7 @@ func isValidLuhn(number int64) bool {
 type OrderScheme struct {
 	ID         int32     `json:"-"`
 	OwnerID    int32     `json:"-"`
-	Number     int64     `json:"number"`
+	Number     string    `json:"number"`
 	Status     string    `json:"status"`
 	Accrual    float64   `json:"accrual,omitempty"`
 	UploadedAt time.Time `json:"uploaded_at"`
