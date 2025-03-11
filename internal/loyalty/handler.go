@@ -17,13 +17,13 @@ func NewHandler(service LoyaltyService) LoyaltyHandler {
 	return LoyaltyHandler{service: service}
 }
 
-func (h LoyaltyHandler) ShowBalance(c *fiber.Ctx) error {
+func (h LoyaltyHandler) GetBalance(c *fiber.Ctx) error {
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
 		logger.Instance.Error().Err(err).Caller().Send()
 		return fiber.ErrInternalServerError
 	}
-	balance, err := h.service.GetUsersBalance(c.Context(), userID.Int32())
+	balance, err := h.service.GetUserBalance(c.Context(), userID.Int32())
 	if err != nil {
 		logger.Instance.Error().Err(err).Caller().Send()
 		return fiber.ErrInternalServerError
@@ -61,4 +61,23 @@ func (h LoyaltyHandler) WithdrawPoints(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 	return c.SendStatus(fiber.StatusOK)
+}
+
+func (h LoyaltyHandler) GetWithdrawals(c *fiber.Ctx) error {
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		logger.Instance.Error().Err(err).Caller().Send()
+		return fiber.ErrInternalServerError
+	}
+
+	withdrawals, err := h.service.GetUserWithdrawals(c.Context(), userID.Int32())
+	if err != nil {
+		if errors.Is(err, errs.ErrLoyaltyNoWithdrawals) {
+			return fiber.NewError(fiber.StatusNoContent, err.Error())
+		}
+		logger.Instance.Error().Err(err).Caller().Send()
+		return fiber.ErrInternalServerError
+	}
+
+	return c.JSON(withdrawals)
 }

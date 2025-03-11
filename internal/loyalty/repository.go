@@ -202,6 +202,32 @@ func (r LoyaltyRepository) ReduceBalance(
 
 func (r LoyaltyRepository) ReadWithdrawals(
 	ctx context.Context, userID int32,
-) error {
-	return nil
+) (WithdrawalsScheme, error) {
+	log := logger.Instance.With().
+		Caller().
+		Int32("userID", userID).
+		Logger()
+
+	stmt := `
+	SELECT order_number, transaction_amount, processed_at
+	FROM bonus_transactions
+	WHERE user_id=$1 AND transaction_type=$2
+	ORDER BY processed_at DESC;
+	`
+	rows, err := r.db.Query(ctx, stmt, userID, tWithdraw)
+	if err != nil {
+		log.Error().Err(err).Msg("selecting loyalty account transactions")
+	}
+	defer rows.Close()
+
+	var withdrawals WithdrawalsScheme
+	for rows.Next() {
+		err = withdrawals.ScanRow(rows)
+		if err != nil {
+			log.Error().Err(err).Msg("scanning row")
+			return withdrawals, err
+		}
+	}
+
+	return withdrawals, rows.Err()
 }

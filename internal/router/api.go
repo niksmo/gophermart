@@ -29,26 +29,51 @@ func SetupApiRoutes(appServer server.HTTPServer) {
 			loyalty.NewRepository(database.DB),
 		),
 	)
-	userPath.Post("/register", middleware.RequireJSON, authHandler.Register)
-	userPath.Post("/login", middleware.RequireJSON, authHandler.Login)
+	userPath.Post(
+		"/register",
+		middleware.RequireJSON,
+		authHandler.Register,
+	)
+	userPath.Post(
+		"/login",
+		middleware.RequireJSON,
+		authHandler.Login,
+	)
 
-	protectedUserPath := userPath.Group("", middleware.Authorized(config.Auth.Key()))
+	protectedUserPath := userPath.Group(
+		"", middleware.Authorized(config.Auth.Key()),
+	)
 
 	// Orders
 	ordersHandler := orders.NewHandler(
 		orders.NewService(orders.NewRepository(database.DB)),
 	)
-	protectedUserPath.Post("/orders", ordersHandler.UploadOrder)
-	protectedUserPath.Get("/orders", ordersHandler.GetOrders)
+	protectedUserPath.Post(
+		"/orders",
+		ordersHandler.UploadOrder,
+	)
+	protectedUserPath.Get(
+		"/orders",
+		ordersHandler.GetOrders,
+	)
 
 	// Loyalty
 	loyaltyHandler := loyalty.NewHandler(
 		loyalty.NewService(loyalty.NewRepository(database.DB)),
 	)
-	protectedUserPath.Get("/balance", loyaltyHandler.ShowBalance)
+	protectedUserPath.Get(
+		"/balance",
+		loyaltyHandler.GetBalance,
+	)
+
 	protectedUserPath.Post(
 		"/balance/withdraw",
 		middleware.RequireJSON,
 		loyaltyHandler.WithdrawPoints,
+	)
+
+	protectedUserPath.Get(
+		"/withdrawals",
+		loyaltyHandler.GetWithdrawals,
 	)
 }

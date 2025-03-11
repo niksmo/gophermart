@@ -17,9 +17,9 @@ type BalanceScheme struct {
 	LastUpdate time.Time `json:"-"`
 }
 
-func (bs *BalanceScheme) ScanRow(row di.Row) error {
+func (b *BalanceScheme) ScanRow(row di.Row) error {
 	return row.Scan(
-		&bs.ID, &bs.OwnerID, &bs.Balance, &bs.Withdraw, &bs.LastUpdate,
+		&b.ID, &b.OwnerID, &b.Balance, &b.Withdraw, &b.LastUpdate,
 	)
 }
 
@@ -33,16 +33,16 @@ type InvalidWithdrawScheme struct {
 	Amount      []string `json:"sum,omitempty"`
 }
 
-func (ws WithdrawRequestScheme) Validate() (result InvalidWithdrawScheme, ok bool) {
+func (w WithdrawRequestScheme) Validate() (result InvalidWithdrawScheme, ok bool) {
 	ok = true
-	number, err := strconv.Atoi(ws.OrderNumber)
+	number, err := strconv.Atoi(w.OrderNumber)
 	if err != nil || !luhn.ValidateLuhn(number) {
 		result.OrderNumber = append(
 			result.OrderNumber, errs.ErrOrderInvalidNum.Error(),
 		)
 		ok = false
 	}
-	if ws.Amount < 0 {
+	if w.Amount < 0 {
 		result.Amount = append(
 			result.Amount, errs.ErrLoyaltyNegativeAmount.Error(),
 		)
@@ -50,4 +50,27 @@ func (ws WithdrawRequestScheme) Validate() (result InvalidWithdrawScheme, ok boo
 	}
 
 	return
+}
+
+type WithdrawScheme struct {
+	OrderNumber string    `json:"order"`
+	Amount      float64   `json:"sum"`
+	ProcessedAt time.Time `json:"processed_at"`
+}
+
+func (w *WithdrawScheme) ScanRow(row di.Row) error {
+	return row.Scan(
+		&w.OrderNumber, &w.Amount, &w.ProcessedAt,
+	)
+}
+
+type WithdrawalsScheme []WithdrawScheme
+
+func (wl *WithdrawalsScheme) ScanRow(row di.Row) error {
+	var withdraw WithdrawScheme
+	if err := withdraw.ScanRow(row); err != nil {
+		return err
+	}
+	*wl = append(*wl, withdraw)
+	return nil
 }
