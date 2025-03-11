@@ -45,13 +45,13 @@ type InvalidValidationData struct {
 func validateScheme(
 	login, password string,
 ) (result InvalidValidationData, ok bool) {
+	ok = true
 	result.Login = validateLogin(login)
 	result.Password = validatePassword(password)
 	if result.Login != nil || result.Password != nil {
 		ok = false
 		return
 	}
-	ok = true
 	return
 }
 

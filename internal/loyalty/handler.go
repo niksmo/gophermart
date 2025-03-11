@@ -1,7 +1,10 @@
 package loyalty
 
 import (
+	"errors"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/niksmo/gophermart/internal/errs"
 	"github.com/niksmo/gophermart/pkg/logger"
 	"github.com/niksmo/gophermart/pkg/middleware"
 )
@@ -26,4 +29,36 @@ func (h LoyaltyHandler) ShowBalance(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 	return c.JSON(balance)
+}
+
+func (h LoyaltyHandler) WithdrawPoints(c *fiber.Ctx) error {
+	var payload WithdrawRequestScheme
+	err := c.BodyParser(&payload)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	validationData, ok := payload.Validate()
+	if !ok {
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(validationData)
+	}
+
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		logger.Instance.Error().Err(err).Caller().Send()
+		return fiber.ErrInternalServerError
+	}
+
+	err = h.service.WithdrawPoints(
+		c.Context(), userID.Int32(), payload.OrderNumber, payload.Amount,
+	)
+
+	if err != nil {
+		if errors.Is(err, errs.ErrLoyaltyNotEnoughPoints) {
+			return fiber.NewError(fiber.StatusPaymentRequired, err.Error())
+		}
+		logger.Instance.Error().Err(err).Caller().Send()
+		return fiber.ErrInternalServerError
+	}
+	return c.SendStatus(fiber.StatusOK)
 }

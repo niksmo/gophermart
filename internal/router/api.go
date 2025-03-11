@@ -46,4 +46,9 @@ func SetupApiRoutes(appServer server.HTTPServer) {
 		loyalty.NewService(loyalty.NewRepository(database.DB)),
 	)
 	protectedUserPath.Get("/balance", loyaltyHandler.ShowBalance)
+	protectedUserPath.Post(
+		"/balance/withdraw",
+		middleware.RequireJSON,
+		loyaltyHandler.WithdrawPoints,
+	)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/niksmo/gophermart/internal/errs"
 	"github.com/niksmo/gophermart/pkg/logger"
 )
 
@@ -127,6 +128,75 @@ func (r LoyaltyRepository) GrowthBalance(
 func (r LoyaltyRepository) ReduceBalance(
 	ctx context.Context, userID int32, orderNumber string, amount float64,
 ) error {
+	log := logger.Instance.With().
+		Caller().
+		Int32("userID", userID).
+		Str("orderNumber", orderNumber).
+		Float64("amount", amount).
+		Logger()
+
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("beginning tx")
+	}
+
+	defer func() {
+		if err != nil {
+			if err := tx.Rollback(ctx); err != nil {
+				log.Error().Err(err).Msg("rollback tx")
+			}
+			return
+		}
+		if err := tx.Commit(ctx); err != nil {
+			log.Error().Err(err).Msg("commit tx")
+		}
+	}()
+
+	stmt := `
+	SELECT balance
+	FROM bonus_accounts 
+	WHERE user_id=$1
+	FOR UPDATE;
+	`
+	var current float64
+	err = tx.QueryRow(ctx, stmt, userID).Scan(&current)
+	if err != nil {
+		log.Error().Err(err).Msg("selecting current balance")
+		return err
+	}
+
+	if current < amount {
+		return errs.ErrLoyaltyNotEnoughPoints
+	}
+
+	stmt = `
+	INSERT INTO bonus_transactions (
+	user_id, order_number, transaction_type, transaction_amount
+	)
+	VALUES (
+	$1, $2, $3, $4
+	);
+	`
+	_, err = tx.Exec(ctx, stmt, userID, orderNumber, tWithdraw, amount)
+	if err != nil {
+		log.Error().Err(err).Msg("inserting bonus transaction")
+		return err
+	}
+
+	stmt = `
+	UPDATE bonus_accounts
+	SET
+        balance=$2,
+		withdraw=withdraw+$3,
+		last_update=CURRENT_TIMESTAMP
+	WHERE user_id=$1;
+	`
+	_, err = tx.Exec(ctx, stmt, userID, current-amount, amount)
+	if err != nil {
+		log.Error().Err(err).Msg("updating user account")
+		return err
+	}
+
 	return nil
 }
 

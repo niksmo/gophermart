@@ -6,6 +6,7 @@ import (
 
 	"github.com/niksmo/gophermart/internal/errs"
 	"github.com/niksmo/gophermart/pkg/di"
+	"github.com/niksmo/gophermart/pkg/luhn"
 )
 
 type OrderNumberScheme []byte
@@ -16,32 +17,10 @@ func (orderNumber OrderNumberScheme) Validate() (string, error) {
 	if err != nil {
 		return "", errs.ErrOrderInvalidFormat
 	}
-	if !isValidLuhn(number) {
+	if !luhn.ValidateLuhn(number) {
 		return "", errs.ErrOrderInvalidNum
 	}
 	return numberString, nil
-}
-
-func isValidLuhn(number int) bool {
-	if number < 0 {
-		return false
-	}
-
-	var sum int
-	var isEvenOrder bool
-	for number > 0 {
-		cur := number % 10
-
-		if isEvenOrder {
-			cur *= 2
-			cur = cur/10 + cur%10
-		}
-
-		sum += cur
-		number /= 10
-		isEvenOrder = !isEvenOrder
-	}
-	return sum%10 == 0
 }
 
 type OrderScheme struct {
