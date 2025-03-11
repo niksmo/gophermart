@@ -32,20 +32,16 @@ func (r LoyaltyRepository) Create(ctx context.Context, userID int32) error {
 	return nil
 }
 
-func (r LoyaltyRepository) Read(ctx context.Context, userID int32) (BalanceScheme, error) {
+func (r LoyaltyRepository) ReadBalance(
+	ctx context.Context, userID int32,
+) (BalanceScheme, error) {
 	stmt := `
 	SELECT id, user_id, balance, withdraw, last_update
 	FROM bonus_accounts
 	WHERE user_id=$1;
 	`
 	var balance BalanceScheme
-	err := r.db.QueryRow(ctx, stmt, userID).Scan(
-		&balance.ID,
-		&balance.OwnerID,
-		&balance.Balance,
-		&balance.Withdraw,
-		&balance.LastUpdate,
-	)
+	err := balance.ScanRow(r.db.QueryRow(ctx, stmt, userID))
 	if err != nil {
 		logger.Instance.Error().
 			Err(err).
@@ -57,6 +53,85 @@ func (r LoyaltyRepository) Read(ctx context.Context, userID int32) (BalanceSchem
 	return balance, nil
 }
 
-func (r LoyaltyRepository) Update(ctx context.Context) error {
+func (r LoyaltyRepository) GrowthBalance(
+	ctx context.Context, userID int32, orderNumber string, amount float64,
+) error {
+	log := logger.Instance.With().
+		Caller().
+		Int32("userID", userID).
+		Str("orderNumber", orderNumber).
+		Logger()
+
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("beginning tx")
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			if err := tx.Rollback(ctx); err != nil {
+				log.Error().Err(err).Msg("rollback tx")
+			}
+			return
+		}
+		err = tx.Commit(ctx)
+		if err != nil {
+			log.Error().Err(err).Msg("committing tx")
+		}
+	}()
+
+	stmt := `
+	SELECT balance
+	FROM bonus_accounts
+	WHERE user_id=$1
+	FOR UPDATE;
+	`
+	var current float64
+	err = tx.QueryRow(ctx, stmt, userID).Scan(&current)
+	if err != nil {
+		log.Error().Err(err).Msg("selecting current balance")
+		return err
+	}
+
+	stmt = `
+	INSERT INTO bonus_transactions (
+	user_id, order_number, transaction_type, transaction_amount
+	)
+	VALUES (
+	$1, $2, $3, $4
+	);
+	`
+	_, err = tx.Exec(ctx, stmt, userID, orderNumber, tAdd, amount)
+	if err != nil {
+		log.Error().Err(err).Msg("inserting bonus transaction")
+		return err
+	}
+
+	stmt = `
+	UPDATE bonus_accounts
+	SET
+        balance=$2,
+		last_update=CURRENT_TIMESTAMP
+	WHERE user_id=$1;
+	`
+	_, err = tx.Exec(ctx, stmt, userID, current+amount)
+	if err != nil {
+		log.Error().Err(err).Msg("updating user account")
+		return err
+	}
+
+	return nil
+}
+
+func (r LoyaltyRepository) ReduceBalance(
+	ctx context.Context, userID int32, orderNumber string, amount float64,
+) error {
+	return nil
+}
+
+func (r LoyaltyRepository) ReadWithdrawals(
+	ctx context.Context, userID int32,
+) error {
 	return nil
 }

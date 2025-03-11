@@ -3,10 +3,8 @@ package orders
 import (
 	"context"
 	"errors"
-	"time"
 
 	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/niksmo/gophermart/internal/errs"
@@ -46,7 +44,7 @@ func (r OrdersRepository) Create(ctx context.Context, userID int32, orderNumber 
 
 func (r OrdersRepository) ReadByOrderNumber(
 	ctx context.Context, orderNumber string,
-) (order OrderScheme, err error) {
+) (OrderScheme, error) {
 	stmt := `
 	WITH certain_order AS (
 	    SELECT id, user_id, status_id, number, accrual, uploaded_at
@@ -58,31 +56,28 @@ func (r OrdersRepository) ReadByOrderNumber(
 	JOIN order_status AS s ON o.status_id = s.id;
 	`
 
-	err = r.db.QueryRow(ctx, stmt, orderNumber).Scan(
-		&order.ID,
-		&order.OwnerID,
-		&order.Number,
-		&order.Status,
-		&order.Accrual,
-		&order.UploadedAt,
-	)
+	var order OrderScheme
+	err := order.ScanRow(r.db.QueryRow(ctx, stmt, orderNumber))
 	if err != nil {
 		logger.Instance.Error().Err(err).Caller().Msg("reading order by number")
-		return
+		return order, err
 	}
-	return
+	return order, nil
 }
 
 func (r OrdersRepository) ReadListByUser(
-	ctx context.Context, userID int32, orders []OrderScheme,
-) ([]OrderScheme, error) {
+	ctx context.Context, userID int32,
+) (OrderListScheme, error) {
+	log := logger.Instance.With().Caller().Logger()
+	var orderList OrderListScheme
 	stmt := `
 	WITH certain_order AS (
 	    SELECT id, user_id, status_id, number, accrual, uploaded_at
 		FROM orders
 		WHERE user_id = $1
 	)
-	SELECT o.id, o.user_id, o.number, s.name AS status, o.accrual, o.uploaded_at
+	SELECT 
+	    o.id, o.user_id, o.number, s.name AS status, o.accrual, o.uploaded_at
 	FROM certain_order AS o
 	JOIN order_status AS s ON o.status_id = s.id
 	ORDER BY o.uploaded_at DESC;
@@ -90,36 +85,17 @@ func (r OrdersRepository) ReadListByUser(
 
 	rows, err := r.db.Query(ctx, stmt, userID)
 	if err != nil {
-		logger.Instance.Error().Err(err).Caller().Msg("reading order list by user")
-		return orders, err
+		log.Error().Err(err).Msg("query order list")
+		return orderList, err
 	}
-	var (
-		id         int32
-		ownerID    int32
-		number     string
-		status     string
-		accrual    float64
-		uploadetAt time.Time
-	)
+	defer rows.Close()
 
-	scanRowFn := func() error {
-		orders = append(
-			orders,
-			OrderScheme{id, ownerID, number, status, accrual, uploadetAt},
-		)
-		return nil
+	for rows.Next() {
+		err = orderList.ScanRow(rows)
+		if err != nil {
+			log.Error().Err(err).Msg("scanning row")
+			return orderList, err
+		}
 	}
-
-	_, err = pgx.ForEachRow(
-		rows,
-		[]any{&id, &ownerID, &number, &status, &accrual, &uploadetAt},
-		scanRowFn,
-	)
-
-	if err != nil {
-		logger.Instance.Error().Err(err).Caller().Msg("reading order list by user")
-		return orders, err
-	}
-
-	return orders, nil
+	return orderList, rows.Err()
 }

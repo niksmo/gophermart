@@ -41,10 +41,9 @@ func SetupApiRoutes(appServer server.HTTPServer) {
 	protectedUserPath.Post("/orders", ordersHandler.UploadOrder)
 	protectedUserPath.Get("/orders", ordersHandler.GetOrders)
 
-	// Bonuses
+	// Loyalty
 	loyaltyHandler := loyalty.NewHandler(
 		loyalty.NewService(loyalty.NewRepository(database.DB)),
 	)
 	protectedUserPath.Get("/balance", loyaltyHandler.ShowBalance)
-
 }

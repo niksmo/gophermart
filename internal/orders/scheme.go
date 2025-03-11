@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/niksmo/gophermart/internal/errs"
+	"github.com/niksmo/gophermart/pkg/di"
 )
 
 type OrderNumberScheme []byte
@@ -50,4 +51,26 @@ type OrderScheme struct {
 	Status     string    `json:"status"`
 	Accrual    float64   `json:"accrual,omitempty"`
 	UploadedAt time.Time `json:"uploaded_at"`
+}
+
+func (order *OrderScheme) ScanRow(row di.Row) error {
+	return row.Scan(
+		&order.ID,
+		&order.OwnerID,
+		&order.Number,
+		&order.Status,
+		&order.Accrual,
+		&order.UploadedAt,
+	)
+}
+
+type OrderListScheme []OrderScheme
+
+func (orderList *OrderListScheme) ScanRow(row di.Row) error {
+	var order OrderScheme
+	if err := order.ScanRow(row); err != nil {
+		return err
+	}
+	*orderList = append(*orderList, order)
+	return nil
 }
