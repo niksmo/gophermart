@@ -14,7 +14,7 @@ type ctxKeyType struct{}
 
 var KeyUserID ctxKeyType
 
-type UserID int64
+type UserID int32
 
 func (userID UserID) Int32() int32 {
 	return int32(userID)

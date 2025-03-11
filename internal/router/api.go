@@ -5,7 +5,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/niksmo/gophermart/config"
 	"github.com/niksmo/gophermart/internal/auth"
-	"github.com/niksmo/gophermart/internal/bonuses"
+	"github.com/niksmo/gophermart/internal/loyalty"
 	"github.com/niksmo/gophermart/internal/orders"
 	"github.com/niksmo/gophermart/internal/users"
 	"github.com/niksmo/gophermart/pkg/database"
@@ -19,23 +19,61 @@ func SetupApiRoutes(appServer server.HTTPServer) {
 
 	api := appServer.Group("/api", logging, compress.New())
 
+	userPath := api.Group("/user")
+
 	// Auth
 	authHandler := auth.NewHandler(
 		auth.NewService(
 			config.Auth,
 			users.NewRepository(database.DB),
-			bonuses.NewRepository(database.DB),
+			loyalty.NewRepository(database.DB),
 		),
 	)
-	api.Post("/user/register", middleware.RequireJSON, authHandler.Register)
-	api.Post("/user/login", middleware.RequireJSON, authHandler.Login)
+	userPath.Post(
+		"/register",
+		middleware.RequireJSON,
+		authHandler.Register,
+	)
+	userPath.Post(
+		"/login",
+		middleware.RequireJSON,
+		authHandler.Login,
+	)
 
-	authorized := api.Group("", middleware.Authorized(config.Auth.Key()))
+	protectedUserPath := userPath.Group(
+		"", middleware.Authorized(config.Auth.Key()),
+	)
 
 	// Orders
-	orderHandler := orders.NewHandler(
+	ordersHandler := orders.NewHandler(
 		orders.NewService(orders.NewRepository(database.DB)),
 	)
-	authorized.Post("/user/orders", orderHandler.UploadOrder)
-	authorized.Get("/user/orders", orderHandler.GetOrders)
+	protectedUserPath.Post(
+		"/orders",
+		ordersHandler.UploadOrder,
+	)
+	protectedUserPath.Get(
+		"/orders",
+		ordersHandler.GetOrders,
+	)
+
+	// Loyalty
+	loyaltyHandler := loyalty.NewHandler(
+		loyalty.NewService(loyalty.NewRepository(database.DB)),
+	)
+	protectedUserPath.Get(
+		"/balance",
+		loyaltyHandler.GetBalance,
+	)
+
+	protectedUserPath.Post(
+		"/balance/withdraw",
+		middleware.RequireJSON,
+		loyaltyHandler.WithdrawPoints,
+	)
+
+	protectedUserPath.Get(
+		"/withdrawals",
+		loyaltyHandler.GetWithdrawals,
+	)
 }

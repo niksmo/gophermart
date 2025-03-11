@@ -54,14 +54,13 @@ func (h OrdersHandler) UploadOrder(c *fiber.Ctx) error {
 }
 
 func (h OrdersHandler) GetOrders(c *fiber.Ctx) error {
-	orders := make([]OrderScheme, 0)
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
 		logger.Instance.Error().Err(err).Caller().Send()
 		return fiber.ErrInternalServerError
 	}
 
-	orders, err = h.service.GetUserOrders(c.Context(), userID.Int32(), orders)
+	orderList, err := h.service.GetUserOrders(c.Context(), userID.Int32())
 	if err != nil {
 		if errors.Is(err, errs.ErrOrdersNoUploads) {
 			return fiber.NewError(fiber.StatusNoContent, err.Error())
@@ -69,5 +68,5 @@ func (h OrdersHandler) GetOrders(c *fiber.Ctx) error {
 		logger.Instance.Error().Err(err).Caller().Send()
 		return fiber.ErrInternalServerError
 	}
-	return c.JSON(orders)
+	return c.JSON(orderList)
 }

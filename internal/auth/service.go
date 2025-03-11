@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/niksmo/gophermart/config"
-	"github.com/niksmo/gophermart/internal/bonuses"
 	"github.com/niksmo/gophermart/internal/errs"
+	"github.com/niksmo/gophermart/internal/loyalty"
 	"github.com/niksmo/gophermart/internal/users"
 	"github.com/niksmo/gophermart/pkg/jwt"
 	"github.com/niksmo/gophermart/pkg/logger"
@@ -15,18 +15,18 @@ import (
 type AuthService struct {
 	authConfig        config.AuthConfig
 	usersRepository   users.UsersRepository
-	bonusesRepository bonuses.BonusesRepository
+	loyaltyRepository loyalty.LoyaltyRepository
 }
 
 func NewService(
 	authConfig config.AuthConfig,
 	usersRepository users.UsersRepository,
-	bonusesRepository bonuses.BonusesRepository,
+	loyaltyRepository loyalty.LoyaltyRepository,
 ) AuthService {
 	return AuthService{
 		authConfig:        authConfig,
 		usersRepository:   usersRepository,
-		bonusesRepository: bonusesRepository,
+		loyaltyRepository: loyaltyRepository,
 	}
 }
 
@@ -45,7 +45,7 @@ func (s AuthService) RegisterUser(
 		return "", err
 	}
 
-	err = s.bonusesRepository.CreateAccount(ctx, int32(userID))
+	err = s.loyaltyRepository.Create(ctx, int32(userID))
 	if err != nil {
 		return "", err
 	}
