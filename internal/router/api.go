@@ -19,6 +19,8 @@ func SetupApiRoutes(appServer server.HTTPServer) {
 
 	api := appServer.Group("/api", logging, compress.New())
 
+	userPath := api.Group("/user")
+
 	// Auth
 	authHandler := auth.NewHandler(
 		auth.NewService(
@@ -27,15 +29,22 @@ func SetupApiRoutes(appServer server.HTTPServer) {
 			bonuses.NewRepository(database.DB),
 		),
 	)
-	api.Post("/user/register", middleware.RequireJSON, authHandler.Register)
-	api.Post("/user/login", middleware.RequireJSON, authHandler.Login)
+	userPath.Post("/register", middleware.RequireJSON, authHandler.Register)
+	userPath.Post("/login", middleware.RequireJSON, authHandler.Login)
 
-	authorized := api.Group("", middleware.Authorized(config.Auth.Key()))
+	protectedUserPath := userPath.Group("", middleware.Authorized(config.Auth.Key()))
 
 	// Orders
-	orderHandler := orders.NewHandler(
+	ordersHandler := orders.NewHandler(
 		orders.NewService(orders.NewRepository(database.DB)),
 	)
-	authorized.Post("/user/orders", orderHandler.UploadOrder)
-	authorized.Get("/user/orders", orderHandler.GetOrders)
+	protectedUserPath.Post("/orders", ordersHandler.UploadOrder)
+	protectedUserPath.Get("/orders", ordersHandler.GetOrders)
+
+	// Bonuses
+	bonusesHandler := bonuses.NewBonusesHandler(
+		bonuses.NewBonusesService(bonuses.NewRepository(database.DB)),
+	)
+	protectedUserPath.Get("/balance", bonusesHandler.ShowBalance)
+
 }

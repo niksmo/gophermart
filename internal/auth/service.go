@@ -45,7 +45,7 @@ func (s AuthService) RegisterUser(
 		return "", err
 	}
 
-	err = s.bonusesRepository.CreateAccount(ctx, int32(userID))
+	err = s.bonusesRepository.Create(ctx, int32(userID))
 	if err != nil {
 		return "", err
 	}

@@ -32,7 +32,12 @@ func (r OrdersRepository) Create(ctx context.Context, userID int32, orderNumber 
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
 			return errs.ErrOrderUploaded
 		}
-		logger.Instance.Error().Err(err).Caller().Msg("creating order")
+		logger.Instance.Error().
+			Err(err).
+			Caller().
+			Int32("userID", userID).
+			Str("orderNumber", orderNumber).
+			Msg("creating order")
 		return err
 	}
 
