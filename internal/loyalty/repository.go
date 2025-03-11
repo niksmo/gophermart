@@ -1,4 +1,4 @@
-package bonuses
+package loyalty
 
 import (
 	"context"
@@ -8,19 +8,19 @@ import (
 )
 
 const (
-	addT      = "A"
-	withdrawT = "W"
+	tAdd      = "A"
+	tWithdraw = "W"
 )
 
-type BonusesRepository struct {
+type LoyaltyRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewRepository(db *pgxpool.Pool) BonusesRepository {
-	return BonusesRepository{db: db}
+func NewRepository(db *pgxpool.Pool) LoyaltyRepository {
+	return LoyaltyRepository{db: db}
 }
 
-func (r BonusesRepository) Create(ctx context.Context, userID int32) error {
+func (r LoyaltyRepository) Create(ctx context.Context, userID int32) error {
 	stmt := `
 	INSERT INTO bonus_accounts (user_id) VALUES ($1);
 	`
@@ -32,7 +32,7 @@ func (r BonusesRepository) Create(ctx context.Context, userID int32) error {
 	return nil
 }
 
-func (r BonusesRepository) Read(ctx context.Context, userID int32) (BalanceScheme, error) {
+func (r LoyaltyRepository) Read(ctx context.Context, userID int32) (BalanceScheme, error) {
 	stmt := `
 	SELECT id, user_id, balance, withdraw, last_update
 	FROM bonus_accounts
@@ -57,6 +57,6 @@ func (r BonusesRepository) Read(ctx context.Context, userID int32) (BalanceSchem
 	return balance, nil
 }
 
-func (r BonusesRepository) Update(ctx context.Context) error {
+func (r LoyaltyRepository) Update(ctx context.Context) error {
 	return nil
 }

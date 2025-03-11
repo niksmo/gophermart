@@ -1,4 +1,4 @@
-package bonuses
+package loyalty
 
 import (
 	"github.com/gofiber/fiber/v2"
@@ -6,15 +6,15 @@ import (
 	"github.com/niksmo/gophermart/pkg/middleware"
 )
 
-type BonusesHandler struct {
-	service BonusesService
+type LoyaltyHandler struct {
+	service LoyaltyService
 }
 
-func NewBonusesHandler(service BonusesService) BonusesHandler {
-	return BonusesHandler{service: service}
+func NewHandler(service LoyaltyService) LoyaltyHandler {
+	return LoyaltyHandler{service: service}
 }
 
-func (h BonusesHandler) ShowBalance(c *fiber.Ctx) error {
+func (h LoyaltyHandler) ShowBalance(c *fiber.Ctx) error {
 	userID, err := middleware.GetUserID(c)
 	if err != nil {
 		logger.Instance.Error().Err(err).Caller().Send()

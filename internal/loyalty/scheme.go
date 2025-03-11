@@ -1,4 +1,4 @@
-package bonuses
+package loyalty
 
 import "time"
 

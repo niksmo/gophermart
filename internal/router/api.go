@@ -5,7 +5,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/niksmo/gophermart/config"
 	"github.com/niksmo/gophermart/internal/auth"
-	"github.com/niksmo/gophermart/internal/bonuses"
+	"github.com/niksmo/gophermart/internal/loyalty"
 	"github.com/niksmo/gophermart/internal/orders"
 	"github.com/niksmo/gophermart/internal/users"
 	"github.com/niksmo/gophermart/pkg/database"
@@ -26,7 +26,7 @@ func SetupApiRoutes(appServer server.HTTPServer) {
 		auth.NewService(
 			config.Auth,
 			users.NewRepository(database.DB),
-			bonuses.NewRepository(database.DB),
+			loyalty.NewRepository(database.DB),
 		),
 	)
 	userPath.Post("/register", middleware.RequireJSON, authHandler.Register)
@@ -42,9 +42,9 @@ func SetupApiRoutes(appServer server.HTTPServer) {
 	protectedUserPath.Get("/orders", ordersHandler.GetOrders)
 
 	// Bonuses
-	bonusesHandler := bonuses.NewBonusesHandler(
-		bonuses.NewBonusesService(bonuses.NewRepository(database.DB)),
+	loyaltyHandler := loyalty.NewHandler(
+		loyalty.NewService(loyalty.NewRepository(database.DB)),
 	)
-	protectedUserPath.Get("/balance", bonusesHandler.ShowBalance)
+	protectedUserPath.Get("/balance", loyaltyHandler.ShowBalance)
 
 }
