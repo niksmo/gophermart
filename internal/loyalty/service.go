@@ -65,17 +65,23 @@ func (s LoyaltyService) flushTransactions(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case order := <-s.ordersToLoyaltyStream:
-			log.Info().
-				Str("orderNum", order.Number).
-				Float64("amount", order.Accrual).
-				Msg("append transaction")
 			transactions = append(transactions, TransactionScheme{
 				UserID:      order.OwnerID,
 				OrderNumber: order.Number,
 				Amount:      order.Accrual,
 			})
+
+			log.Info().
+				Str("orderNum", order.Number).
+				Float64("amount", order.Accrual).
+				Msg("append transaction")
 		case <-ticker.C:
 			logger.Instance.Info().Caller().Msg("flush transactions tick occur")
+			err := s.repository.CreateAddTransactions(ctx, transactions)
+			if err != nil {
+				log.Error().Err(err).Msg("didn't flush")
+				continue
+			}
 			transactions = nil
 		}
 	}

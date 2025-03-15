@@ -3,14 +3,16 @@ package loyalty
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/niksmo/gophermart/internal/errs"
 	"github.com/niksmo/gophermart/pkg/logger"
+	"github.com/rs/zerolog/log"
 )
 
 const (
-	tAdd      = "A"
-	tWithdraw = "W"
+	T_ADD      = "A"
+	T_WITHDRAW = "W"
 )
 
 type LoyaltyRepository struct {
@@ -21,7 +23,7 @@ func NewRepository(db *pgxpool.Pool) LoyaltyRepository {
 	return LoyaltyRepository{db: db}
 }
 
-func (r LoyaltyRepository) Create(ctx context.Context, userID int32) error {
+func (r LoyaltyRepository) CreateAccount(ctx context.Context, userID int32) error {
 	stmt := `
 	INSERT INTO bonus_accounts (user_id) VALUES ($1);
 	`
@@ -31,6 +33,52 @@ func (r LoyaltyRepository) Create(ctx context.Context, userID int32) error {
 		return err
 	}
 	return nil
+}
+
+func (r LoyaltyRepository) CreateAddTransactions(
+	ctx context.Context, transactions []TransactionScheme,
+) error {
+	logger.Instance.With().Caller().Logger()
+
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("beginning tx")
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			if err := tx.Rollback(ctx); err != nil {
+				log.Error().Err(err).Msg("rollback tx")
+			}
+			return
+		}
+		err = tx.Commit(ctx)
+		if err != nil {
+			log.Error().Err(err).Msg("committing tx")
+		}
+	}()
+
+	batch := &pgx.Batch{}
+	for _, t := range transactions {
+		stmt := `
+		WITH transaction AS (
+			INSERT INTO bonus_transactions (
+				user_id, order_number, transaction_type, transaction_amount
+			)
+			VALUES ($1, $2, $3, $4)
+			RETURNING user_id
+		)
+		UPDATE bonus_accounts
+		SET
+			balance = balance + $4, last_update = CURRENT_TIMESTAMP
+		WHERE user_id = (SELECT user_id FROM transaction);
+		`
+		batch.Queue(stmt, t.UserID, t.OrderNumber, T_ADD, t.Amount)
+	}
+	err = tx.SendBatch(ctx, batch).Close()
+
+	return err
 }
 
 func (r LoyaltyRepository) ReadBalance(
@@ -52,77 +100,6 @@ func (r LoyaltyRepository) ReadBalance(
 		return balance, err
 	}
 	return balance, nil
-}
-
-func (r LoyaltyRepository) GrowthBalance(
-	ctx context.Context, userID int32, orderNumber string, amount float64,
-) error {
-	log := logger.Instance.With().
-		Caller().
-		Int32("userID", userID).
-		Str("orderNumber", orderNumber).
-		Logger()
-
-	tx, err := r.db.Begin(ctx)
-	if err != nil {
-		log.Error().Err(err).Msg("beginning tx")
-		return err
-	}
-
-	defer func() {
-		if err != nil {
-			if err := tx.Rollback(ctx); err != nil {
-				log.Error().Err(err).Msg("rollback tx")
-			}
-			return
-		}
-		err = tx.Commit(ctx)
-		if err != nil {
-			log.Error().Err(err).Msg("committing tx")
-		}
-	}()
-
-	stmt := `
-	SELECT balance
-	FROM bonus_accounts
-	WHERE user_id=$1
-	FOR UPDATE;
-	`
-	var current float64
-	err = tx.QueryRow(ctx, stmt, userID).Scan(&current)
-	if err != nil {
-		log.Error().Err(err).Msg("selecting current balance")
-		return err
-	}
-
-	stmt = `
-	INSERT INTO bonus_transactions (
-	user_id, order_number, transaction_type, transaction_amount
-	)
-	VALUES (
-	$1, $2, $3, $4
-	);
-	`
-	_, err = tx.Exec(ctx, stmt, userID, orderNumber, tAdd, amount)
-	if err != nil {
-		log.Error().Err(err).Msg("inserting bonus transaction")
-		return err
-	}
-
-	stmt = `
-	UPDATE bonus_accounts
-	SET
-        balance=$2,
-		last_update=CURRENT_TIMESTAMP
-	WHERE user_id=$1;
-	`
-	_, err = tx.Exec(ctx, stmt, userID, current+amount)
-	if err != nil {
-		log.Error().Err(err).Msg("updating user account")
-		return err
-	}
-
-	return nil
 }
 
 func (r LoyaltyRepository) ReduceBalance(
@@ -177,7 +154,7 @@ func (r LoyaltyRepository) ReduceBalance(
 	$1, $2, $3, $4
 	);
 	`
-	_, err = tx.Exec(ctx, stmt, userID, orderNumber, tWithdraw, amount)
+	_, err = tx.Exec(ctx, stmt, userID, orderNumber, T_WITHDRAW, amount)
 	if err != nil {
 		log.Error().Err(err).Msg("inserting bonus transaction")
 		return err
@@ -214,7 +191,7 @@ func (r LoyaltyRepository) ReadWithdrawals(
 	WHERE user_id=$1 AND transaction_type=$2
 	ORDER BY processed_at DESC;
 	`
-	rows, err := r.db.Query(ctx, stmt, userID, tWithdraw)
+	rows, err := r.db.Query(ctx, stmt, userID, T_WITHDRAW)
 	if err != nil {
 		log.Error().Err(err).Msg("selecting loyalty account transactions")
 	}

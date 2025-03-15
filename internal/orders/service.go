@@ -10,7 +10,14 @@ import (
 	"github.com/niksmo/gophermart/pkg/logger"
 )
 
-const pullStreamSize = 1024
+const (
+	REGISTERED = "REGISTERED"
+	PROCESSING = "PROCESSING"
+	PROCESSED  = "PROCESSED"
+	INVALID    = "INVALID"
+
+	pullStreamSize = 1024
+)
 
 var flushInterval = 10 * time.Second
 
@@ -108,16 +115,17 @@ func (s OrdersService) flushAccrualResults(
 		case <-ctx.Done():
 			return
 		case result := <-s.accrualResultStream:
-			if result.Error == nil {
-				updatedOrders = append(updatedOrders, result.Order)
-				log.Info().
-					Str("orderNum", result.Order.Number).
-					Msg("append order to flush buffer")
+			if result.Error != nil {
+				log.Error().
+					Err(result.Error).
+					Msg("receive error from result stream")
 				continue
 			}
-			log.Error().
-				Err(result.Error).
-				Msg("receive error from result stream")
+
+			updatedOrders = append(updatedOrders, result.Order)
+			log.Info().
+				Str("orderNum", result.Order.Number).
+				Msg("append order to flush buffer")
 		case <-ticker.C:
 			log.Info().Msg("flush updated orders tick occur")
 			err := s.repository.UpdateAccrual(ctx, updatedOrders)
@@ -132,11 +140,13 @@ func (s OrdersService) flushAccrualResults(
 					log.Info().
 						Str("orderNum", order.Number).
 						Msg("send to pull stream")
+
 					s.accrualFetchStream <- order
 				case "PROCESSED":
 					log.Info().
 						Str("orderNum", order.Number).
 						Msg("send to loyalty stream")
+
 					ordersToLoyaltyStream <- order
 				}
 			}

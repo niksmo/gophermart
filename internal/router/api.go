@@ -63,7 +63,9 @@ func SetupApiRoutes(ctx context.Context, appServer server.HTTPServer) {
 	)
 
 	// Loyalty
-	loyaltyService := loyalty.NewService(ctx, loyaltyRepository, ordersToLoyaltyStream)
+	loyaltyService := loyalty.NewService(
+		ctx, loyaltyRepository, ordersToLoyaltyStream,
+	)
 	loyaltyHandler := loyalty.NewHandler(loyaltyService)
 	protectedUserPath.Get(
 		"/balance",
