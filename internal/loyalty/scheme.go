@@ -74,3 +74,9 @@ func (wl *WithdrawalsScheme) ScanRow(row di.Row) error {
 	*wl = append(*wl, withdraw)
 	return nil
 }
+
+type TransactionScheme struct {
+	UserID      int32
+	OrderNumber string
+	Amount      float64
+}

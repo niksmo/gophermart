@@ -14,16 +14,18 @@ const (
 	accrualUsage     = "accrual system address"
 	accrualDefault   = "http://127.0.0.1:5050"
 	accrualFlagPrint = "-" + accrualFlagShort
+
+	ordersGetPath = "/api/orders"
 )
 
 type AccrualConfig struct {
-	base      *url.URL
-	ordersGet string
+	base          *url.URL
+	ordersGetPath string
 }
 
 func NewAccrualConfig() AccrualConfig {
 	var config AccrualConfig
-	config.ordersGet = "/api/orders"
+	config.ordersGetPath = ordersGetPath
 
 	flagValue := viper.GetString(accrualFlag)
 	envValue := viper.GetString(accrualEnv)
@@ -65,5 +67,5 @@ func NewAccrualConfig() AccrualConfig {
 }
 
 func (config *AccrualConfig) GetOrdersReqURL(order string) string {
-	return config.base.JoinPath(config.ordersGet, order).String()
+	return config.base.JoinPath(config.ordersGetPath, order).String()
 }

@@ -2,16 +2,31 @@ package loyalty
 
 import (
 	"context"
+	"time"
 
 	"github.com/niksmo/gophermart/internal/errs"
+	"github.com/niksmo/gophermart/internal/orders"
+	"github.com/niksmo/gophermart/pkg/logger"
 )
 
+var flushInterval = 10 * time.Second
+
 type LoyaltyService struct {
-	repository LoyaltyRepository
+	repository            LoyaltyRepository
+	ordersToLoyaltyStream <-chan orders.OrderScheme
 }
 
-func NewService(repository LoyaltyRepository) LoyaltyService {
-	return LoyaltyService{repository: repository}
+func NewService(
+	ctx context.Context,
+	repository LoyaltyRepository,
+	ordersToLoyaltyStream <-chan orders.OrderScheme,
+) LoyaltyService {
+	service := LoyaltyService{
+		repository:            repository,
+		ordersToLoyaltyStream: ordersToLoyaltyStream,
+	}
+	go service.flushTransactions(ctx)
+	return service
 }
 
 func (s LoyaltyService) GetUserBalance(
@@ -38,4 +53,30 @@ func (s LoyaltyService) GetUserWithdrawals(
 	}
 
 	return withdrawals, nil
+}
+
+func (s LoyaltyService) flushTransactions(ctx context.Context) {
+	log := logger.Instance.With().Caller().Logger()
+	ticker := time.NewTicker(flushInterval)
+	var transactions []TransactionScheme
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case order := <-s.ordersToLoyaltyStream:
+			log.Info().
+				Str("orderNum", order.Number).
+				Float64("amount", order.Accrual).
+				Msg("append transaction")
+			transactions = append(transactions, TransactionScheme{
+				UserID:      order.OwnerID,
+				OrderNumber: order.Number,
+				Amount:      order.Accrual,
+			})
+		case <-ticker.C:
+			logger.Instance.Info().Caller().Msg("flush transactions tick occur")
+			transactions = nil
+		}
+	}
 }

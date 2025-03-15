@@ -1,6 +1,8 @@
 package router
 
 import (
+	"context"
+
 	"github.com/gofiber/contrib/fiberzerolog"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/niksmo/gophermart/config"
@@ -14,21 +16,23 @@ import (
 	"github.com/niksmo/gophermart/pkg/server"
 )
 
-func SetupApiRoutes(appServer server.HTTPServer) {
+func SetupApiRoutes(ctx context.Context, appServer server.HTTPServer) {
 	logging := fiberzerolog.New(fiberzerolog.Config{Logger: &logger.Instance})
 
 	api := appServer.Group("/api", logging, compress.New())
 
 	userPath := api.Group("/user")
 
+	usersRepository := users.NewRepository(database.DB)
+	loyaltyRepository := loyalty.NewRepository(database.DB)
+	ordersRepository := orders.NewRepository(database.DB)
+	ordersToLoyaltyStream := make(chan orders.OrderScheme)
+
 	// Auth
-	authHandler := auth.NewHandler(
-		auth.NewService(
-			config.Auth,
-			users.NewRepository(database.DB),
-			loyalty.NewRepository(database.DB),
-		),
+	authService := auth.NewService(
+		config.Auth, usersRepository, loyaltyRepository,
 	)
+	authHandler := auth.NewHandler(authService)
 	userPath.Post(
 		"/register",
 		middleware.RequireJSON,
@@ -45,9 +49,10 @@ func SetupApiRoutes(appServer server.HTTPServer) {
 	)
 
 	// Orders
-	ordersHandler := orders.NewHandler(
-		orders.NewService(orders.NewRepository(database.DB)),
+	orderService := orders.NewService(
+		ctx, ordersRepository, ordersToLoyaltyStream,
 	)
+	ordersHandler := orders.NewHandler(orderService)
 	protectedUserPath.Post(
 		"/orders",
 		ordersHandler.UploadOrder,
@@ -58,9 +63,8 @@ func SetupApiRoutes(appServer server.HTTPServer) {
 	)
 
 	// Loyalty
-	loyaltyHandler := loyalty.NewHandler(
-		loyalty.NewService(loyalty.NewRepository(database.DB)),
-	)
+	loyaltyService := loyalty.NewService(ctx, loyaltyRepository, ordersToLoyaltyStream)
+	loyaltyHandler := loyalty.NewHandler(loyaltyService)
 	protectedUserPath.Get(
 		"/balance",
 		loyaltyHandler.GetBalance,

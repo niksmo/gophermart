@@ -22,9 +22,12 @@ func main() {
 	database.Migrate(migrations.Init, logger.Instance)
 
 	appServer := server.NewHTTPServer(config.Server.Addr(), logger.Instance)
-	router.SetupApiRoutes(appServer)
+	router.SetupApiRoutes(stopCtx, appServer)
+
+	// MAKE RESTORE FOR NOT ENDED STATUS
 
 	go appServer.Run()
+
 	<-stopCtx.Done()
 	logger.Instance.Info().Str("signal", "interrupt").Msg("shutting down gracefully")
 	appServer.Close()
