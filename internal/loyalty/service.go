@@ -9,7 +9,7 @@ import (
 	"github.com/niksmo/gophermart/pkg/logger"
 )
 
-var flushInterval = 10 * time.Second
+var flushInterval = 4 * time.Second
 
 type LoyaltyService struct {
 	repository            LoyaltyRepository

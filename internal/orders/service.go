@@ -19,7 +19,7 @@ const (
 	pullStreamSize = 1024
 )
 
-var flushInterval = 10 * time.Second
+var flushInterval = 4 * time.Second
 
 type OrdersService struct {
 	repository          OrdersRepository
