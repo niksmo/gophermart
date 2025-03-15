@@ -136,13 +136,13 @@ func (s OrdersService) flushAccrualResults(
 
 			for _, order := range updatedOrders {
 				switch order.Status {
-				case "REGISTERED", "PROCESSING":
+				case REGISTERED, PROCESSING:
 					log.Info().
 						Str("orderNum", order.Number).
 						Msg("send to pull stream")
 
 					s.accrualFetchStream <- order
-				case "PROCESSED":
+				case PROCESSED:
 					log.Info().
 						Str("orderNum", order.Number).
 						Msg("send to loyalty stream")
