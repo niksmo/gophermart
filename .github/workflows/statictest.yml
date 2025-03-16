@@ -20,31 +20,27 @@ jobs:
         with:
           repository: Yandex-Practicum/go-autotests
           sparse-checkout: |
-            cmd/statictest/main.go
+            cmd/statictest
             go.mod
             go.sum
-          path: cmd/statictest
+          sparse-checkout-cone-mode: false
+          path: statictest
       
       - name: list files
         run: |
           ls -la
-          ls -la cmd
-          ls -la cmd/statictest
+          ls -laR statictest
       
       - name: Prepare statictest binary
         run: | 
-          cd cmd/statictest && go build -buildvcs=false -o statictest
+          cd statictest && go build -buildvcs=false -o statictest
 
       # - name: Setup autotest binary
       #   run: |
       #     chmod -R +x $GITHUB_WORKSPACE/.tools/statictest
       #     mv $GITHUB_WORKSPACE/.tools/statictest /usr/local/bin/statictest
 
-      - name: Run statictest
-        run: |
-          ls -la
-          ls -la cmd
-          ls -la cmd/statictest
+      
       # - name: Run statictest
       #   run: |
       #     go vet -vettool=$(which statictest) ./... 
