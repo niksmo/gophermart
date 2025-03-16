@@ -2,12 +2,9 @@ package loyalty
 
 import (
 	"context"
-	"time"
 
 	"github.com/niksmo/gophermart/internal/errs"
 )
-
-var flushInterval = 4 * time.Second
 
 type LoyaltyService struct {
 	repository LoyaltyRepository
