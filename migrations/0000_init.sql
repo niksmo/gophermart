@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS orders (
 
 CREATE TABLE IF NOT EXISTS bonus_accounts (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL UNIQUE,
+    user_id INTEGER NOT NULL UNIQUE REFERENCES users(id),
     balance NUMERIC(9, 2) NOT NULL DEFAULT 0,
     withdraw NUMERIC(9, 2) NOT NULL DEFAULT 0,
     last_update TIMESTAMP  NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS bonus_accounts (
 
 CREATE TABLE IF NOT EXISTS bonus_transactions (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL REFERENCES users(id),
     order_number VARCHAR(30) NOT NULL,
     transaction_type VARCHAR(1) NOT NULL,
     transaction_amount NUMERIC(9, 2) NOT NULL,

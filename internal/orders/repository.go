@@ -116,6 +116,8 @@ func (r OrdersRepository) UpdateAccrual(ctx context.Context, orders []OrderSchem
 
 	batch := &pgx.Batch{}
 
+	var withAccrual []OrderScheme
+
 	for _, order := range orders {
 		stmt := `
 		UPDATE orders
@@ -126,7 +128,28 @@ func (r OrdersRepository) UpdateAccrual(ctx context.Context, orders []OrderSchem
 		WHERE number = $1;
 		`
 		batch.Queue(stmt, order.Number, order.Status, order.Accrual)
+		if order.Accrual != 0 {
+			withAccrual = append(withAccrual, order)
+		}
 	}
+
+	for _, order := range withAccrual {
+		stmt := `
+		WITH transaction AS (
+			INSERT INTO bonus_transactions (
+				user_id, order_number, transaction_type, transaction_amount
+			)
+			VALUES ($1, $2, 'A', $3)
+			RETURNING user_id
+		)
+		UPDATE bonus_accounts
+		SET
+			balance = balance + $3, last_update = CURRENT_TIMESTAMP
+		WHERE user_id = (SELECT user_id FROM transaction);
+		`
+		batch.Queue(stmt, order.OwnerID, order.Number, order.Accrual)
+	}
+
 	err = tx.SendBatch(ctx, batch).Close()
 	return err
 }

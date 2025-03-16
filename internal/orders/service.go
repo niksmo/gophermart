@@ -28,9 +28,7 @@ type OrdersService struct {
 }
 
 func NewService(
-	ctx context.Context,
-	repository OrdersRepository,
-	ordersToLoyaltyStream chan<- OrderScheme,
+	ctx context.Context, repository OrdersRepository,
 ) OrdersService {
 	accrualFetchStream := make(chan OrderScheme, pullStreamSize)
 	accrualResultStream := make(chan AccrualResult)
@@ -48,9 +46,9 @@ func NewService(
 		accrualResultStream: accrualResultStream,
 	}
 
-	go service.flushAccrualResults(ctx, ordersToLoyaltyStream)
+	go service.flushAccrualResults(ctx)
 
-	// TO DO restore func
+	// TO DO restore mechanics
 
 	return service
 }
@@ -103,9 +101,7 @@ func (s OrdersService) handleConflict(
 
 }
 
-func (s OrdersService) flushAccrualResults(
-	ctx context.Context, ordersToLoyaltyStream chan<- OrderScheme,
-) {
+func (s OrdersService) flushAccrualResults(ctx context.Context) {
 	log := logger.Instance.With().Caller().Logger()
 	ticker := time.NewTicker(flushInterval)
 	var updatedOrders []OrderScheme
@@ -118,16 +114,16 @@ func (s OrdersService) flushAccrualResults(
 			if result.Error != nil {
 				log.Error().
 					Err(result.Error).
-					Msg("receive error from result stream")
+					Msg("receive error from fetch stream")
 				continue
 			}
 
 			updatedOrders = append(updatedOrders, result.Order)
 			log.Info().
 				Str("orderNum", result.Order.Number).
-				Msg("append order to flush buffer")
+				Msg("append order to update buffer")
 		case <-ticker.C:
-			log.Info().Msg("flush updated orders tick occur")
+			log.Info().Msg("flush updated orders")
 			err := s.repository.UpdateAccrual(ctx, updatedOrders)
 			if err != nil {
 				log.Error().Err(err).Msg("didn't flush")
@@ -135,22 +131,14 @@ func (s OrdersService) flushAccrualResults(
 			}
 
 			for _, order := range updatedOrders {
-				switch order.Status {
-				case REGISTERED, PROCESSING:
+				if order.Status == REGISTERED || order.Status == PROCESSING {
 					log.Info().
 						Str("orderNum", order.Number).
 						Msg("send to pull stream")
 
 					s.accrualFetchStream <- order
-				case PROCESSED:
-					log.Info().
-						Str("orderNum", order.Number).
-						Msg("send to loyalty stream")
-
-					ordersToLoyaltyStream <- order
 				}
 			}
-
 			updatedOrders = nil
 		}
 	}

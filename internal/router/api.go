@@ -26,7 +26,6 @@ func SetupApiRoutes(ctx context.Context, appServer server.HTTPServer) {
 	usersRepository := users.NewRepository(database.DB)
 	loyaltyRepository := loyalty.NewRepository(database.DB)
 	ordersRepository := orders.NewRepository(database.DB)
-	ordersToLoyaltyStream := make(chan orders.OrderScheme)
 
 	// Auth
 	authService := auth.NewService(
@@ -49,9 +48,7 @@ func SetupApiRoutes(ctx context.Context, appServer server.HTTPServer) {
 	)
 
 	// Orders
-	orderService := orders.NewService(
-		ctx, ordersRepository, ordersToLoyaltyStream,
-	)
+	orderService := orders.NewService(ctx, ordersRepository)
 	ordersHandler := orders.NewHandler(orderService)
 	protectedUserPath.Post(
 		"/orders",
@@ -63,9 +60,7 @@ func SetupApiRoutes(ctx context.Context, appServer server.HTTPServer) {
 	)
 
 	// Loyalty
-	loyaltyService := loyalty.NewService(
-		ctx, loyaltyRepository, ordersToLoyaltyStream,
-	)
+	loyaltyService := loyalty.NewService(ctx, loyaltyRepository)
 	loyaltyHandler := loyalty.NewHandler(loyaltyService)
 	protectedUserPath.Get(
 		"/balance",

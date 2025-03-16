@@ -3,11 +3,9 @@ package loyalty
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/niksmo/gophermart/internal/errs"
 	"github.com/niksmo/gophermart/pkg/logger"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -33,52 +31,6 @@ func (r LoyaltyRepository) CreateAccount(ctx context.Context, userID int32) erro
 		return err
 	}
 	return nil
-}
-
-func (r LoyaltyRepository) CreateAddTransactions(
-	ctx context.Context, transactions []TransactionScheme,
-) error {
-	logger.Instance.With().Caller().Logger()
-
-	tx, err := r.db.Begin(ctx)
-	if err != nil {
-		log.Error().Err(err).Msg("beginning tx")
-		return err
-	}
-
-	defer func() {
-		if err != nil {
-			if err := tx.Rollback(ctx); err != nil {
-				log.Error().Err(err).Msg("rollback tx")
-			}
-			return
-		}
-		err = tx.Commit(ctx)
-		if err != nil {
-			log.Error().Err(err).Msg("committing tx")
-		}
-	}()
-
-	batch := &pgx.Batch{}
-	for _, t := range transactions {
-		stmt := `
-		WITH transaction AS (
-			INSERT INTO bonus_transactions (
-				user_id, order_number, transaction_type, transaction_amount
-			)
-			VALUES ($1, $2, $3, $4)
-			RETURNING user_id
-		)
-		UPDATE bonus_accounts
-		SET
-			balance = balance + $4, last_update = CURRENT_TIMESTAMP
-		WHERE user_id = (SELECT user_id FROM transaction);
-		`
-		batch.Queue(stmt, t.UserID, t.OrderNumber, T_ADD, t.Amount)
-	}
-	err = tx.SendBatch(ctx, batch).Close()
-
-	return err
 }
 
 func (r LoyaltyRepository) ReadBalance(
