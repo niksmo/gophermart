@@ -16,7 +16,7 @@ import (
 	"github.com/niksmo/gophermart/pkg/server"
 )
 
-func SetupApiRoutes(ctx context.Context, appServer server.HTTPServer) {
+func SetupAPIRoutes(ctx context.Context, appServer server.HTTPServer) {
 	logging := fiberzerolog.New(
 		fiberzerolog.Config{Logger: &logger.Instance},
 	)

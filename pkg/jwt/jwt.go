@@ -37,7 +37,7 @@ func Parse(tokenString string, key []byte) (int32, error) {
 func keyFunc(key []byte) jwt.Keyfunc {
 	return func(t *jwt.Token) (any, error) {
 		if !isValidMethod(t.Method) {
-			return nil, errors.New("Unexpected signing method")
+			return nil, errors.New("unexpected signing method")
 		}
 		return key, nil
 	}

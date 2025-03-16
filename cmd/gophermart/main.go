@@ -22,7 +22,7 @@ func main() {
 	database.Migrate(migrations.Init, logger.Instance)
 
 	appServer := server.NewHTTPServer(config.Server.Addr(), logger.Instance)
-	router.SetupApiRoutes(stopCtx, appServer)
+	router.SetupAPIRoutes(stopCtx, appServer)
 
 	go appServer.Run()
 

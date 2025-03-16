@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	T_WITHDRAW = "W"
+	tWithdraw = "W"
 )
 
 type LoyaltyRepository struct {
@@ -110,7 +110,7 @@ func (r LoyaltyRepository) ReduceBalance(
 	$1, $2, $3, $4
 	);
 	`
-	_, err = tx.Exec(ctx, stmt, userID, orderNumber, T_WITHDRAW, amount)
+	_, err = tx.Exec(ctx, stmt, userID, orderNumber, tWithdraw, amount)
 	if err != nil {
 		log.Error().Err(err).Msg("inserting bonus transaction")
 		return err
@@ -147,7 +147,7 @@ func (r LoyaltyRepository) ReadWithdrawals(
 	WHERE user_id=$1 AND transaction_type=$2
 	ORDER BY processed_at DESC;
 	`
-	rows, err := r.db.Query(ctx, stmt, userID, T_WITHDRAW)
+	rows, err := r.db.Query(ctx, stmt, userID, tWithdraw)
 	if err != nil {
 		log.Error().Err(err).Msg("selecting loyalty account transactions")
 	}

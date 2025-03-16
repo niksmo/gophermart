@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	T_ADD = "A"
+	tAdd = "A"
 )
 
 type OrdersRepository struct {
@@ -180,7 +180,7 @@ func (r OrdersRepository) UpdateAccrual(
 			balance = balance + $4, last_update = CURRENT_TIMESTAMP
 		WHERE user_id = (SELECT user_id FROM transaction);
 		`
-		batch.Queue(stmt, order.OwnerID, order.Number, T_ADD, order.Accrual)
+		batch.Queue(stmt, order.OwnerID, order.Number, tAdd, order.Accrual)
 	}
 
 	err = tx.SendBatch(ctx, batch).Close()
