@@ -28,6 +28,9 @@ func (h LoyaltyHandler) GetBalance(c *fiber.Ctx) error {
 		logger.Instance.Error().Err(err).Caller().Send()
 		return fiber.ErrInternalServerError
 	}
+	// REMOVE
+	logger.Instance.Warn().Float32("current", balance.Balance).Float32("withdwar", balance.Withdraw).Msg("GET BALANCE RESPONSE")
+	// ---
 	return c.JSON(balance)
 }
 
@@ -60,6 +63,9 @@ func (h LoyaltyHandler) WithdrawPoints(c *fiber.Ctx) error {
 		logger.Instance.Error().Err(err).Caller().Send()
 		return fiber.ErrInternalServerError
 	}
+	// REMOVE
+	logger.Instance.Warn().Float32("withdraw amount", payload.Amount).Msg("WITHDRAW POINTS")
+	// --
 	return c.SendStatus(fiber.StatusOK)
 }
 
