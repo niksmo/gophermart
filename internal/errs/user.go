@@ -6,7 +6,7 @@ var (
 	ErrUserLoginLength = errors.New("length min 1 and max 60")
 
 	ErrUserLoginInvalid = errors.New(
-		"allow latin charecters, numbers, dash, underlining",
+		"allow latin charecters, numbers, dash, underline",
 	)
 
 	ErrUserPasswordLength = errors.New("length min 1 and max 60")
