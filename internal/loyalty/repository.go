@@ -55,13 +55,13 @@ func (r LoyaltyRepository) ReadBalance(
 }
 
 func (r LoyaltyRepository) ReduceBalance(
-	ctx context.Context, userID int32, orderNumber string, amount float64,
+	ctx context.Context, userID int32, orderNumber string, amount float32,
 ) error {
 	log := logger.Instance.With().
 		Caller().
 		Int32("userID", userID).
 		Str("orderNumber", orderNumber).
-		Float64("amount", amount).
+		Float32("amount", amount).
 		Logger()
 
 	tx, err := r.db.Begin(ctx)
@@ -87,7 +87,7 @@ func (r LoyaltyRepository) ReduceBalance(
 	WHERE user_id=$1
 	FOR UPDATE;
 	`
-	var current float64
+	var current float32
 	err = tx.QueryRow(ctx, stmt, userID).Scan(&current)
 	if err != nil {
 		log.Error().Err(err).Msg("selecting current balance")

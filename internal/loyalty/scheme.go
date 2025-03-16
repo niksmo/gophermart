@@ -12,8 +12,8 @@ import (
 type BalanceScheme struct {
 	ID         int32     `json:"-"`
 	OwnerID    int32     `json:"-"`
-	Balance    float64   `json:"current"`
-	Withdraw   float64   `json:"withdraw"`
+	Balance    float32   `json:"current"`
+	Withdraw   float32   `json:"withdraw"`
 	LastUpdate time.Time `json:"-"`
 }
 
@@ -25,7 +25,7 @@ func (b *BalanceScheme) ScanRow(row di.Row) error {
 
 type WithdrawRequestScheme struct {
 	OrderNumber string  `json:"order"`
-	Amount      float64 `json:"sum"`
+	Amount      float32 `json:"sum"`
 }
 
 type InvalidWithdrawScheme struct {
@@ -54,7 +54,7 @@ func (w WithdrawRequestScheme) Validate() (result InvalidWithdrawScheme, ok bool
 
 type WithdrawScheme struct {
 	OrderNumber string    `json:"order"`
-	Amount      float64   `json:"sum"`
+	Amount      float32   `json:"sum"`
 	ProcessedAt time.Time `json:"processed_at"`
 }
 

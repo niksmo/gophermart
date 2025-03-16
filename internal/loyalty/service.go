@@ -28,7 +28,7 @@ func (s LoyaltyService) GetUserBalance(
 }
 
 func (s LoyaltyService) WithdrawPoints(
-	ctx context.Context, userID int32, orderNumber string, amount float64,
+	ctx context.Context, userID int32, orderNumber string, amount float32,
 ) error {
 	return s.repository.ReduceBalance(ctx, userID, orderNumber, amount)
 }
