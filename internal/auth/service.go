@@ -45,7 +45,7 @@ func (s AuthService) RegisterUser(
 		return "", err
 	}
 
-	err = s.loyaltyRepository.Create(ctx, int32(userID))
+	err = s.loyaltyRepository.CreateAccount(ctx, int32(userID))
 	if err != nil {
 		return "", err
 	}

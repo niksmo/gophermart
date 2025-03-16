@@ -12,20 +12,20 @@ import (
 type BalanceScheme struct {
 	ID         int32     `json:"-"`
 	OwnerID    int32     `json:"-"`
-	Balance    float64   `json:"current"`
-	Withdraw   float64   `json:"withdraw"`
+	Balance    float32   `json:"current"`
+	Withdrawn  float32   `json:"withdrawn"`
 	LastUpdate time.Time `json:"-"`
 }
 
 func (b *BalanceScheme) ScanRow(row di.Row) error {
 	return row.Scan(
-		&b.ID, &b.OwnerID, &b.Balance, &b.Withdraw, &b.LastUpdate,
+		&b.ID, &b.OwnerID, &b.Balance, &b.Withdrawn, &b.LastUpdate,
 	)
 }
 
 type WithdrawRequestScheme struct {
 	OrderNumber string  `json:"order"`
-	Amount      float64 `json:"sum"`
+	Amount      float32 `json:"sum"`
 }
 
 type InvalidWithdrawScheme struct {
@@ -33,7 +33,9 @@ type InvalidWithdrawScheme struct {
 	Amount      []string `json:"sum,omitempty"`
 }
 
-func (w WithdrawRequestScheme) Validate() (result InvalidWithdrawScheme, ok bool) {
+func (w WithdrawRequestScheme) Validate() (
+	result InvalidWithdrawScheme, ok bool,
+) {
 	ok = true
 	number, err := strconv.Atoi(w.OrderNumber)
 	if err != nil || !luhn.ValidateLuhn(number) {
@@ -54,7 +56,7 @@ func (w WithdrawRequestScheme) Validate() (result InvalidWithdrawScheme, ok bool
 
 type WithdrawScheme struct {
 	OrderNumber string    `json:"order"`
-	Amount      float64   `json:"sum"`
+	Amount      float32   `json:"sum"`
 	ProcessedAt time.Time `json:"processed_at"`
 }
 

@@ -4,11 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/niksmo/gophermart/internal/errs"
+	"github.com/niksmo/gophermart/pkg/database"
 	"github.com/niksmo/gophermart/pkg/logger"
 )
 
@@ -30,8 +29,7 @@ func (r UsersRepository) Create(
 	var userID int32
 	err := r.db.QueryRow(ctx, stmt, login, password).Scan(&userID)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+		if database.IsUniqueError(err) {
 			return -1, errs.ErrUserLoginExists
 		}
 		logger.Instance.Warn().Err(err).Msg("creating user")

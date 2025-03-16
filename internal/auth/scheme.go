@@ -16,8 +16,11 @@ const (
 )
 
 var (
-	validLogin    = regexp.MustCompile(`^[\d\w-]+$`)
-	validPassword = regexp.MustCompile(`^[\d\w\-!@#$%^&*()_+|\\\[\]{}'";:\/?>.<,=]+$`)
+	validLogin = regexp.MustCompile(`^[\d\w-]+$`)
+
+	validPassword = regexp.MustCompile(
+		`^[\d\w\-!@#$%^&*()_+|\\\[\]{}'";:\/?>.<,=]+$`,
+	)
 )
 
 type BaseRequestScheme struct {
@@ -25,7 +28,9 @@ type BaseRequestScheme struct {
 	Password string `json:"password"`
 }
 
-func (scheme BaseRequestScheme) Validate() (result InvalidValidationData, ok bool) {
+func (scheme BaseRequestScheme) Validate() (
+	result InvalidValidationData, ok bool,
+) {
 	return validateScheme(scheme.Login, scheme.Password)
 }
 

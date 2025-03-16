@@ -9,8 +9,7 @@ import (
 )
 
 const (
-	tAdd      = "A"
-	tWithdraw = "W"
+	T_WITHDRAW = "W"
 )
 
 type LoyaltyRepository struct {
@@ -21,13 +20,18 @@ func NewRepository(db *pgxpool.Pool) LoyaltyRepository {
 	return LoyaltyRepository{db: db}
 }
 
-func (r LoyaltyRepository) Create(ctx context.Context, userID int32) error {
+func (r LoyaltyRepository) CreateAccount(
+	ctx context.Context, userID int32,
+) error {
 	stmt := `
 	INSERT INTO bonus_accounts (user_id) VALUES ($1);
 	`
 	_, err := r.db.Exec(ctx, stmt, userID)
 	if err != nil {
-		logger.Instance.Error().Err(err).Caller().Msg("creating bonus account")
+		logger.Instance.Error().
+			Err(err).
+			Caller().
+			Msg("creating bonus account")
 		return err
 	}
 	return nil
@@ -54,85 +58,14 @@ func (r LoyaltyRepository) ReadBalance(
 	return balance, nil
 }
 
-func (r LoyaltyRepository) GrowthBalance(
-	ctx context.Context, userID int32, orderNumber string, amount float64,
-) error {
-	log := logger.Instance.With().
-		Caller().
-		Int32("userID", userID).
-		Str("orderNumber", orderNumber).
-		Logger()
-
-	tx, err := r.db.Begin(ctx)
-	if err != nil {
-		log.Error().Err(err).Msg("beginning tx")
-		return err
-	}
-
-	defer func() {
-		if err != nil {
-			if err := tx.Rollback(ctx); err != nil {
-				log.Error().Err(err).Msg("rollback tx")
-			}
-			return
-		}
-		err = tx.Commit(ctx)
-		if err != nil {
-			log.Error().Err(err).Msg("committing tx")
-		}
-	}()
-
-	stmt := `
-	SELECT balance
-	FROM bonus_accounts
-	WHERE user_id=$1
-	FOR UPDATE;
-	`
-	var current float64
-	err = tx.QueryRow(ctx, stmt, userID).Scan(&current)
-	if err != nil {
-		log.Error().Err(err).Msg("selecting current balance")
-		return err
-	}
-
-	stmt = `
-	INSERT INTO bonus_transactions (
-	user_id, order_number, transaction_type, transaction_amount
-	)
-	VALUES (
-	$1, $2, $3, $4
-	);
-	`
-	_, err = tx.Exec(ctx, stmt, userID, orderNumber, tAdd, amount)
-	if err != nil {
-		log.Error().Err(err).Msg("inserting bonus transaction")
-		return err
-	}
-
-	stmt = `
-	UPDATE bonus_accounts
-	SET
-        balance=$2,
-		last_update=CURRENT_TIMESTAMP
-	WHERE user_id=$1;
-	`
-	_, err = tx.Exec(ctx, stmt, userID, current+amount)
-	if err != nil {
-		log.Error().Err(err).Msg("updating user account")
-		return err
-	}
-
-	return nil
-}
-
 func (r LoyaltyRepository) ReduceBalance(
-	ctx context.Context, userID int32, orderNumber string, amount float64,
+	ctx context.Context, userID int32, orderNumber string, amount float32,
 ) error {
 	log := logger.Instance.With().
 		Caller().
 		Int32("userID", userID).
 		Str("orderNumber", orderNumber).
-		Float64("amount", amount).
+		Float32("amount", amount).
 		Logger()
 
 	tx, err := r.db.Begin(ctx)
@@ -158,7 +91,7 @@ func (r LoyaltyRepository) ReduceBalance(
 	WHERE user_id=$1
 	FOR UPDATE;
 	`
-	var current float64
+	var current float32
 	err = tx.QueryRow(ctx, stmt, userID).Scan(&current)
 	if err != nil {
 		log.Error().Err(err).Msg("selecting current balance")
@@ -177,7 +110,7 @@ func (r LoyaltyRepository) ReduceBalance(
 	$1, $2, $3, $4
 	);
 	`
-	_, err = tx.Exec(ctx, stmt, userID, orderNumber, tWithdraw, amount)
+	_, err = tx.Exec(ctx, stmt, userID, orderNumber, T_WITHDRAW, amount)
 	if err != nil {
 		log.Error().Err(err).Msg("inserting bonus transaction")
 		return err
@@ -214,7 +147,7 @@ func (r LoyaltyRepository) ReadWithdrawals(
 	WHERE user_id=$1 AND transaction_type=$2
 	ORDER BY processed_at DESC;
 	`
-	rows, err := r.db.Query(ctx, stmt, userID, tWithdraw)
+	rows, err := r.db.Query(ctx, stmt, userID, T_WITHDRAW)
 	if err != nil {
 		log.Error().Err(err).Msg("selecting loyalty account transactions")
 	}

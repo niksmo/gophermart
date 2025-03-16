@@ -28,7 +28,7 @@ type OrderScheme struct {
 	OwnerID    int32     `json:"-"`
 	Number     string    `json:"number"`
 	Status     string    `json:"status"`
-	Accrual    float64   `json:"accrual,omitempty"`
+	Accrual    float32   `json:"accrual,omitempty"`
 	UploadedAt time.Time `json:"uploaded_at"`
 }
 
@@ -52,4 +52,10 @@ func (orderList *OrderListScheme) ScanRow(row di.Row) error {
 	}
 	*orderList = append(*orderList, order)
 	return nil
+}
+
+type AccrualScheme struct {
+	OrderNumber string  `json:"order"`
+	Status      string  `json:"status"`
+	Amount      float32 `json:"accrual,omitempty"`
 }

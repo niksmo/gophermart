@@ -70,7 +70,9 @@ func (h LoyaltyHandler) GetWithdrawals(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	withdrawals, err := h.service.GetUserWithdrawals(c.Context(), userID.Int32())
+	withdrawals, err := h.service.GetUserWithdrawals(
+		c.Context(), userID.Int32(),
+	)
 	if err != nil {
 		if errors.Is(err, errs.ErrLoyaltyNoWithdrawals) {
 			return fiber.NewError(fiber.StatusNoContent, err.Error())

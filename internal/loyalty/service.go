@@ -2,16 +2,23 @@ package loyalty
 
 import (
 	"context"
+	"time"
 
 	"github.com/niksmo/gophermart/internal/errs"
 )
+
+var flushInterval = 4 * time.Second
 
 type LoyaltyService struct {
 	repository LoyaltyRepository
 }
 
-func NewService(repository LoyaltyRepository) LoyaltyService {
-	return LoyaltyService{repository: repository}
+func NewService(
+	ctx context.Context, repository LoyaltyRepository,
+) LoyaltyService {
+	return LoyaltyService{
+		repository: repository,
+	}
 }
 
 func (s LoyaltyService) GetUserBalance(
@@ -21,7 +28,7 @@ func (s LoyaltyService) GetUserBalance(
 }
 
 func (s LoyaltyService) WithdrawPoints(
-	ctx context.Context, userID int32, orderNumber string, amount float64,
+	ctx context.Context, userID int32, orderNumber string, amount float32,
 ) error {
 	return s.repository.ReduceBalance(ctx, userID, orderNumber, amount)
 }

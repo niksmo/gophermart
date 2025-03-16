@@ -3,25 +3,74 @@ package orders
 import (
 	"context"
 	"errors"
+	"runtime"
+	"time"
 
 	"github.com/niksmo/gophermart/internal/errs"
+	"github.com/niksmo/gophermart/pkg/logger"
 )
 
+const (
+	REGISTERED = "REGISTERED"
+	PROCESSING = "PROCESSING"
+	PROCESSED  = "PROCESSED"
+
+	pullStreamSize       = 1024
+	maxRestoreListSize   = 100
+	restoreBatchInterval = time.Minute
+)
+
+var flushInterval = 4 * time.Second
+
 type OrdersService struct {
-	repository OrdersRepository
+	repository          OrdersRepository
+	accrualFetchStream  chan OrderScheme
+	accrualResultStream chan AccrualResult
 }
 
-func NewService(repository OrdersRepository) OrdersService {
-	return OrdersService{repository: repository}
+func NewService(
+	ctx context.Context, repository OrdersRepository,
+) OrdersService {
+	accrualFetchStream := make(chan OrderScheme, pullStreamSize)
+	accrualResultStream := make(chan AccrualResult)
+
+	workerPool := AccrualWorkerPool{
+		Num:     runtime.NumCPU(),
+		ChanIN:  accrualFetchStream,
+		ChanOUT: accrualResultStream,
+	}
+	workerPool.Run(ctx)
+
+	service := OrdersService{
+		repository:          repository,
+		accrualFetchStream:  accrualFetchStream,
+		accrualResultStream: accrualResultStream,
+	}
+
+	go service.retoreAccrualFetch(ctx)
+	go service.flushAccrualResults(ctx)
+
+	return service
 }
 
-func (s OrdersService) UploadOrder(ctx context.Context, userID int32, orderNumber string) error {
-	err := s.repository.Create(ctx, userID, orderNumber)
+func (s OrdersService) UploadOrder(
+	ctx context.Context, userID int32, orderNumber string,
+) error {
+	order, err := s.repository.Create(ctx, userID, orderNumber)
 	if err != nil {
 		if errors.Is(err, errs.ErrOrderUploaded) {
-			return s.processUploadConflict(ctx, userID, orderNumber)
+			return s.handleConflict(ctx, userID, orderNumber)
 		}
 		return err
+	}
+
+	select {
+	case s.accrualFetchStream <- order:
+	default:
+		logger.Instance.Error().
+			Str("orderNumber", order.Number).
+			Caller().
+			Msg("accrual stream is full")
 	}
 	return nil
 }
@@ -40,7 +89,7 @@ func (s OrdersService) GetUserOrders(
 	return orderList, nil
 }
 
-func (s OrdersService) processUploadConflict(
+func (s OrdersService) handleConflict(
 	ctx context.Context, userID int32, orderNumber string,
 ) error {
 	order, err := s.repository.ReadByOrderNumber(ctx, orderNumber)
@@ -51,5 +100,78 @@ func (s OrdersService) processUploadConflict(
 		return errs.ErrOrderUploadedByUser
 	}
 	return errs.ErrOrderUploadedByOther
+}
 
+func (s OrdersService) flushAccrualResults(ctx context.Context) {
+	log := logger.Instance.With().Caller().Logger()
+	ticker := time.NewTicker(flushInterval)
+	var updatedOrders []OrderScheme
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case result := <-s.accrualResultStream:
+			if result.Error != nil {
+				log.Error().
+					Err(result.Error).
+					Msg("receive error from fetch stream")
+				continue
+			}
+			updatedOrders = append(updatedOrders, result.Order)
+		case <-ticker.C:
+			err := s.repository.UpdateAccrual(ctx, updatedOrders)
+			if err != nil {
+				log.Error().Err(err).Msg("didn't flush")
+				continue
+			}
+
+			for _, order := range updatedOrders {
+				if order.Status == REGISTERED || order.Status == PROCESSING {
+					s.accrualFetchStream <- order
+				}
+			}
+			updatedOrders = nil
+		}
+	}
+}
+
+func (s OrdersService) retoreAccrualFetch(ctx context.Context) {
+	log := logger.Instance.With().Caller().Logger()
+	orders, err := s.repository.ReadNonAccrualList(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("didn't restore")
+		return
+	}
+
+	if len(orders) == 0 {
+		return
+	}
+
+	log.Info().Int("ordersToRestore", len(orders)).Msg("prepare to restore")
+
+	ticker := time.NewTicker(restoreBatchInterval)
+	for {
+		size := min(maxRestoreListSize, len(orders))
+		for _, order := range orders[:size] {
+			select {
+			case <-ctx.Done():
+				return
+			case s.accrualFetchStream <- order:
+			}
+		}
+
+		orders = orders[size:]
+		if len(orders) == 0 {
+			break
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
+
+	log.Info().Msg("all non accrual orders send to fetch stream")
 }

@@ -2,13 +2,16 @@ package orders
 
 import (
 	"context"
-	"errors"
 
-	"github.com/jackc/pgerrcode"
-	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/niksmo/gophermart/internal/errs"
+	"github.com/niksmo/gophermart/pkg/database"
 	"github.com/niksmo/gophermart/pkg/logger"
+)
+
+const (
+	T_ADD = "A"
 )
 
 type OrdersRepository struct {
@@ -19,16 +22,19 @@ func NewRepository(db *pgxpool.Pool) OrdersRepository {
 	return OrdersRepository{db: db}
 }
 
-func (r OrdersRepository) Create(ctx context.Context, userID int32, orderNumber string) error {
+func (r OrdersRepository) Create(
+	ctx context.Context, userID int32, orderNumber string,
+) (order OrderScheme, err error) {
 	stmt := `
-	INSERT INTO orders (user_id, number) VALUES ($1, $2);
+	INSERT INTO orders (user_id, number) VALUES ($1, $2)
+	RETURNING id, user_id, number, status, accrual, uploaded_at;
 	`
-
-	_, err := r.db.Exec(ctx, stmt, userID, orderNumber)
+	row := r.db.QueryRow(ctx, stmt, userID, orderNumber)
+	err = order.ScanRow(row)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-			return errs.ErrOrderUploaded
+		if database.IsUniqueError(err) {
+			err = errs.ErrOrderUploaded
+			return
 		}
 		logger.Instance.Error().
 			Err(err).
@@ -36,53 +42,44 @@ func (r OrdersRepository) Create(ctx context.Context, userID int32, orderNumber 
 			Int32("userID", userID).
 			Str("orderNumber", orderNumber).
 			Msg("creating order")
-		return err
+		return
 	}
-
-	return nil
+	return
 }
 
 func (r OrdersRepository) ReadByOrderNumber(
 	ctx context.Context, orderNumber string,
-) (OrderScheme, error) {
+) (order OrderScheme, err error) {
 	stmt := `
-	WITH certain_order AS (
-	    SELECT id, user_id, status_id, number, accrual, uploaded_at
-		FROM orders
-		WHERE number = $1
-	)
-	SELECT o.id, o.user_id, o.number, s.name AS status, o.accrual, o.uploaded_at
-	FROM certain_order AS o
-	JOIN order_status AS s ON o.status_id = s.id;
+	SELECT id, user_id, number, status, accrual, uploaded_at
+	FROM orders
+	WHERE number = $1;
 	`
 
-	var order OrderScheme
-	err := order.ScanRow(r.db.QueryRow(ctx, stmt, orderNumber))
+	row := r.db.QueryRow(ctx, stmt, orderNumber)
+	err = order.ScanRow(row)
 	if err != nil {
-		logger.Instance.Error().Err(err).Caller().Msg("reading order by number")
-		return order, err
+		logger.Instance.Error().
+			Err(err).
+			Caller().
+			Msg("reading order by number")
+		return
 	}
-	return order, nil
+	return
 }
 
 func (r OrdersRepository) ReadListByUser(
 	ctx context.Context, userID int32,
 ) (OrderListScheme, error) {
 	log := logger.Instance.With().Caller().Logger()
-	var orderList OrderListScheme
 	stmt := `
-	WITH certain_order AS (
-	    SELECT id, user_id, status_id, number, accrual, uploaded_at
-		FROM orders
-		WHERE user_id = $1
-	)
-	SELECT 
-	    o.id, o.user_id, o.number, s.name AS status, o.accrual, o.uploaded_at
-	FROM certain_order AS o
-	JOIN order_status AS s ON o.status_id = s.id
-	ORDER BY o.uploaded_at DESC;
+	SELECT id, user_id, number, status, accrual, uploaded_at
+	FROM orders
+	WHERE user_id = $1
+	ORDER BY uploaded_at DESC;
 	`
 
+	var orderList OrderListScheme
 	rows, err := r.db.Query(ctx, stmt, userID)
 	if err != nil {
 		log.Error().Err(err).Msg("query order list")
@@ -98,4 +95,94 @@ func (r OrdersRepository) ReadListByUser(
 		}
 	}
 	return orderList, rows.Err()
+}
+
+func (r OrdersRepository) ReadNonAccrualList(
+	ctx context.Context,
+) (OrderListScheme, error) {
+	log := logger.Instance.With().Caller().Logger()
+	stmt := `
+	SELECT id, user_id, number, status, accrual, uploaded_at
+	FROM orders
+	WHERE status NOT IN ('INVALID', 'PROCESSED');
+	`
+
+	var orderList OrderListScheme
+	rows, err := r.db.Query(ctx, stmt)
+	if err != nil {
+		log.Error().Err(err).Msg("query order list")
+		return orderList, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		err = orderList.ScanRow(rows)
+		if err != nil {
+			log.Error().Err(err).Msg("scanning row")
+			return orderList, err
+		}
+	}
+	return orderList, rows.Err()
+}
+
+func (r OrdersRepository) UpdateAccrual(
+	ctx context.Context, orders []OrderScheme,
+) error {
+	log := logger.Instance.With().Caller().Logger()
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("begin tx")
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			if err := tx.Rollback(ctx); err != nil {
+				log.Error().Err(err).Msg("rollback tx")
+			}
+			return
+		}
+		if err := tx.Commit(ctx); err != nil {
+			log.Error().Err(err).Msg("commit tx")
+		}
+	}()
+
+	batch := &pgx.Batch{}
+
+	var withAccrual []OrderScheme
+
+	for _, order := range orders {
+		stmt := `
+		UPDATE orders
+		SET
+			status = $2,
+			accrual = $3,
+			last_update = CURRENT_TIMESTAMP
+		WHERE number = $1;
+		`
+		batch.Queue(stmt, order.Number, order.Status, order.Accrual)
+		if order.Accrual != 0 {
+			withAccrual = append(withAccrual, order)
+		}
+	}
+
+	for _, order := range withAccrual {
+		stmt := `
+		WITH transaction AS (
+			INSERT INTO bonus_transactions (
+				user_id, order_number, transaction_type, transaction_amount
+			)
+			VALUES ($1, $2, $3, $4)
+			RETURNING user_id
+		)
+		UPDATE bonus_accounts
+		SET
+			balance = balance + $4, last_update = CURRENT_TIMESTAMP
+		WHERE user_id = (SELECT user_id FROM transaction);
+		`
+		batch.Queue(stmt, order.OwnerID, order.Number, T_ADD, order.Accrual)
+	}
+
+	err = tx.SendBatch(ctx, batch).Close()
+	return err
 }
