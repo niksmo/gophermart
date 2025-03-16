@@ -53,12 +53,9 @@ func (w *AccrualWorker) Run(
 	orderStream <-chan OrderScheme,
 	resultStream chan<- AccrualResult,
 ) {
+	log := logger.Instance.With().Caller().Logger()
+
 	for order := range orderStream {
-		log := logger.Instance.With().
-			Str("orderNum", order.Number).
-			Caller().
-			Logger()
-		log.Info().Msg("receive order")
 		select {
 		case <-ctx.Done():
 			return
@@ -66,7 +63,10 @@ func (w *AccrualWorker) Run(
 			result := AccrualResult{Order: order}
 			data, err := w.getAccrualStatus(ctx, order.Number)
 			if err != nil {
-				log.Error().Err(err).Send()
+				log.Error().
+					Err(err).
+					Str("orderNum", order.Number).
+					Msg("accrual result error")
 				result.Error = err
 				resultStream <- result
 				continue
@@ -74,13 +74,14 @@ func (w *AccrualWorker) Run(
 
 			var accrual AccrualScheme
 			if err := json.Unmarshal(data, &accrual); err != nil {
-				log.Error().Err(err).Send()
+				log.Error().
+					Err(err).
+					Str("orderNum", order.Number).
+					Msg("unmarshal accrual service response data")
 				result.Error = err
 				resultStream <- result
 				continue
 			}
-
-			log.Info().Msg("send to flush stream")
 			result.Order.Status = accrual.Status
 			result.Order.Accrual = accrual.Amount
 			resultStream <- result
