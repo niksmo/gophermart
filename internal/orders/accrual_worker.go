@@ -115,7 +115,7 @@ func (w *AccrualWorker) getAccrualStatus(
 		case statusCode == fiber.StatusOK:
 			return body, nil
 		case statusCode == fiber.StatusNoContent:
-			return nil, errors.New("No content")
+			return nil, errors.New("order didn't posted to accrual system")
 		case (statusCode == fiber.StatusTooManyRequests &&
 			retryAfterString != ""):
 			retryAfter, err := strconv.Atoi(retryAfterString)
