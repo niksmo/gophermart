@@ -13,13 +13,13 @@ type BalanceScheme struct {
 	ID         int32     `json:"-"`
 	OwnerID    int32     `json:"-"`
 	Balance    float32   `json:"current"`
-	Withdraw   float32   `json:"withdraw"`
+	Withdrawn  float32   `json:"withdrawn"`
 	LastUpdate time.Time `json:"-"`
 }
 
 func (b *BalanceScheme) ScanRow(row di.Row) error {
 	return row.Scan(
-		&b.ID, &b.OwnerID, &b.Balance, &b.Withdraw, &b.LastUpdate,
+		&b.ID, &b.OwnerID, &b.Balance, &b.Withdrawn, &b.LastUpdate,
 	)
 }
 
