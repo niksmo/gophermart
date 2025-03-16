@@ -9,7 +9,6 @@ import (
 )
 
 const (
-	T_ADD      = "A"
 	T_WITHDRAW = "W"
 )
 
@@ -21,13 +20,18 @@ func NewRepository(db *pgxpool.Pool) LoyaltyRepository {
 	return LoyaltyRepository{db: db}
 }
 
-func (r LoyaltyRepository) CreateAccount(ctx context.Context, userID int32) error {
+func (r LoyaltyRepository) CreateAccount(
+	ctx context.Context, userID int32,
+) error {
 	stmt := `
 	INSERT INTO bonus_accounts (user_id) VALUES ($1);
 	`
 	_, err := r.db.Exec(ctx, stmt, userID)
 	if err != nil {
-		logger.Instance.Error().Err(err).Caller().Msg("creating bonus account")
+		logger.Instance.Error().
+			Err(err).
+			Caller().
+			Msg("creating bonus account")
 		return err
 	}
 	return nil

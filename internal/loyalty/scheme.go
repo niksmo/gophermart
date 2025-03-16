@@ -33,7 +33,9 @@ type InvalidWithdrawScheme struct {
 	Amount      []string `json:"sum,omitempty"`
 }
 
-func (w WithdrawRequestScheme) Validate() (result InvalidWithdrawScheme, ok bool) {
+func (w WithdrawRequestScheme) Validate() (
+	result InvalidWithdrawScheme, ok bool,
+) {
 	ok = true
 	number, err := strconv.Atoi(w.OrderNumber)
 	if err != nil || !luhn.ValidateLuhn(number) {

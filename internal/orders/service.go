@@ -14,9 +14,10 @@ const (
 	REGISTERED = "REGISTERED"
 	PROCESSING = "PROCESSING"
 	PROCESSED  = "PROCESSED"
-	INVALID    = "INVALID"
 
-	pullStreamSize = 1024
+	pullStreamSize       = 1024
+	maxRestoreListSize   = 100
+	restoreBatchInterval = time.Minute
 )
 
 var flushInterval = 4 * time.Second
@@ -46,14 +47,15 @@ func NewService(
 		accrualResultStream: accrualResultStream,
 	}
 
+	go service.retoreAccrualFetch(ctx)
 	go service.flushAccrualResults(ctx)
-
-	// TO DO restore mechanics
 
 	return service
 }
 
-func (s OrdersService) UploadOrder(ctx context.Context, userID int32, orderNumber string) error {
+func (s OrdersService) UploadOrder(
+	ctx context.Context, userID int32, orderNumber string,
+) error {
 	order, err := s.repository.Create(ctx, userID, orderNumber)
 	if err != nil {
 		if errors.Is(err, errs.ErrOrderUploaded) {
@@ -98,7 +100,6 @@ func (s OrdersService) handleConflict(
 		return errs.ErrOrderUploadedByUser
 	}
 	return errs.ErrOrderUploadedByOther
-
 }
 
 func (s OrdersService) flushAccrualResults(ctx context.Context) {
@@ -117,13 +118,8 @@ func (s OrdersService) flushAccrualResults(ctx context.Context) {
 					Msg("receive error from fetch stream")
 				continue
 			}
-
 			updatedOrders = append(updatedOrders, result.Order)
-			log.Info().
-				Str("orderNum", result.Order.Number).
-				Msg("append order to update buffer")
 		case <-ticker.C:
-			log.Info().Msg("flush updated orders")
 			err := s.repository.UpdateAccrual(ctx, updatedOrders)
 			if err != nil {
 				log.Error().Err(err).Msg("didn't flush")
@@ -132,14 +128,50 @@ func (s OrdersService) flushAccrualResults(ctx context.Context) {
 
 			for _, order := range updatedOrders {
 				if order.Status == REGISTERED || order.Status == PROCESSING {
-					log.Info().
-						Str("orderNum", order.Number).
-						Msg("send to pull stream")
-
 					s.accrualFetchStream <- order
 				}
 			}
 			updatedOrders = nil
 		}
 	}
+}
+
+func (s OrdersService) retoreAccrualFetch(ctx context.Context) {
+	log := logger.Instance.With().Caller().Logger()
+	orders, err := s.repository.ReadNonAccrualList(ctx)
+	if err != nil {
+		log.Error().Err(err).Msg("didn't restore")
+		return
+	}
+
+	if len(orders) == 0 {
+		return
+	}
+
+	log.Info().Int("ordersToRestore", len(orders)).Msg("prepare to restore")
+
+	ticker := time.NewTicker(restoreBatchInterval)
+	for {
+		size := min(maxRestoreListSize, len(orders))
+		for _, order := range orders[:size] {
+			select {
+			case <-ctx.Done():
+				return
+			case s.accrualFetchStream <- order:
+			}
+		}
+
+		orders = orders[size:]
+		if len(orders) == 0 {
+			break
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
+
+	log.Info().Msg("all non accrual orders send to fetch stream")
 }

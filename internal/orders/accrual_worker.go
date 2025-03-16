@@ -12,7 +12,11 @@ import (
 	"github.com/niksmo/gophermart/pkg/logger"
 )
 
-var retryIntervals = [3]time.Duration{time.Second, 3 * time.Second, 5 * time.Second}
+var retryIntervals = [3]time.Duration{
+	time.Second,
+	3 * time.Second,
+	5 * time.Second,
+}
 
 type AccrualWorkerPool struct {
 	Num     int

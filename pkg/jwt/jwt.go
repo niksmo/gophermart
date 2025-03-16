@@ -21,7 +21,9 @@ func newClaims(userID int32, lifetime time.Duration) Claims {
 func Create(
 	ID int32, key []byte, lifetime time.Duration,
 ) (tokenString string, err error) {
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, newClaims(ID, lifetime))
+	token := jwt.NewWithClaims(
+		jwt.SigningMethodHS256, newClaims(ID, lifetime),
+	)
 	tokenString, err = token.SignedString(key)
 	return
 }

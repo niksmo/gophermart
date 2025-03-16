@@ -25,7 +25,9 @@ func (h OrdersHandler) UploadOrder(c *fiber.Ctx) error {
 		case errors.Is(err, errs.ErrOrderInvalidFormat):
 			return fiber.NewError(fiber.StatusBadRequest, err.Error())
 		case errors.Is(err, errs.ErrOrderInvalidNum):
-			return fiber.NewError(fiber.StatusUnprocessableEntity, err.Error())
+			return fiber.NewError(
+				fiber.StatusUnprocessableEntity, err.Error(),
+			)
 		default:
 			logger.Instance.Error().Err(err).Caller().Send()
 			return fiber.ErrInternalServerError

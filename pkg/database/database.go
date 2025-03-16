@@ -2,7 +2,10 @@ package database
 
 import (
 	"context"
+	"errors"
 
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
 )
@@ -35,4 +38,10 @@ func Migrate(stmt string, logger zerolog.Logger) {
 
 func Close() {
 	DB.Close()
+}
+
+func IsUniqueError(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) &&
+		pgErr.Code == pgerrcode.UniqueViolation
 }

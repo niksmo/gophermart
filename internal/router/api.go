@@ -17,7 +17,9 @@ import (
 )
 
 func SetupApiRoutes(ctx context.Context, appServer server.HTTPServer) {
-	logging := fiberzerolog.New(fiberzerolog.Config{Logger: &logger.Instance})
+	logging := fiberzerolog.New(
+		fiberzerolog.Config{Logger: &logger.Instance},
+	)
 
 	api := appServer.Group("/api", logging, compress.New())
 
