@@ -33,7 +33,9 @@ jobs:
       
       - name: Prepare statictest binary
         run: | 
-          cd statictest && go build -buildvcs=false -o statictest
+          (cd statictest && go build -buildvcs=false -o statictest ./cmd/statictest/.)
+          (mv statictest/statictest /usr/local/bin/statictest)
+          (which statictest)
 
       # - name: Setup autotest binary
       #   run: |
