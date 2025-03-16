@@ -19,12 +19,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Yandex-Practicum/go-autotests
-          ref: main
           sparse-checkout: |
-            cmd/statictest
+            cmd/statictest/main.go
             go.mod
             go.sum
           path: cmd/statictest
+      
+      - name: list files
+        run: |
+          ls -la
+          ls -la cmd
+          ls -la cmd/statictest
       
       - name: Prepare statictest binary
         run: | 
