@@ -5,6 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/niksmo/gophermart/internal/errs"
+	"github.com/niksmo/gophermart/pkg/di"
 	"github.com/niksmo/gophermart/pkg/logger"
 )
 
@@ -20,14 +21,8 @@ func NewHandler(service AuthService) AuthHandler {
 
 func (h AuthHandler) Register(c *fiber.Ctx) error {
 	var payload SignupRequestScheme
-	err := c.BodyParser(&payload)
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	}
-
-	validationResult, ok := payload.Validate()
-	if !ok {
-		return c.Status(fiber.StatusBadRequest).JSON(validationResult)
+	if err := validateAuthRequest(c, &payload); err != nil {
+		return err
 	}
 
 	tokenString, err := h.service.RegisterUser(
@@ -45,14 +40,8 @@ func (h AuthHandler) Register(c *fiber.Ctx) error {
 
 func (h AuthHandler) Login(c *fiber.Ctx) error {
 	var payload SigninRequestScheme
-	err := c.BodyParser(&payload)
-	if err != nil {
-		return fiber.NewError(fiber.StatusBadRequest, err.Error())
-	}
-
-	validationResult, ok := payload.Validate()
-	if !ok {
-		return c.Status(fiber.StatusBadRequest).JSON(validationResult)
+	if err := validateAuthRequest(c, &payload); err != nil {
+		return err
 	}
 
 	tokenString, err := h.service.AuthorizeUser(
@@ -67,6 +56,24 @@ func (h AuthHandler) Login(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 	return authorize(c, tokenString)
+}
+
+func validateAuthRequest(c *fiber.Ctx, payload any) error {
+	err := c.BodyParser(payload)
+	if err != nil {
+		return fiber.NewError(fiber.StatusBadRequest, err.Error())
+	}
+
+	validator, ok := payload.(di.Validator)
+	if !ok {
+		return fiber.ErrInternalServerError
+	}
+
+	result, valid := validator.Validate()
+	if !valid {
+		return c.Status(fiber.StatusBadRequest).JSON(result)
+	}
+	return nil
 }
 
 func authorize(c *fiber.Ctx, tokenString string) error {
