@@ -96,7 +96,11 @@ func (s OrdersService) handleConflict(
 	if err != nil {
 		return err
 	}
-	if order.OwnerID == userID {
+	return s.determineUploadedErr(userID, order.OwnerID)
+}
+
+func (s OrdersService) determineUploadedErr(userID, ownerID int32) error {
+	if ownerID == userID {
 		return errs.ErrOrderUploadedByUser
 	}
 	return errs.ErrOrderUploadedByOther
