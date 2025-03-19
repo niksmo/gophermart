@@ -47,9 +47,6 @@ func NewService(
 		accrualResultStream: accrualResultStream,
 	}
 
-	go service.retoreAccrualFetch(ctx)
-	go service.flushAccrualResults(ctx)
-
 	return service
 }
 
@@ -106,7 +103,7 @@ func (s OrdersService) determineUploadedErr(userID, ownerID int32) error {
 	return errs.ErrOrderUploadedByOther
 }
 
-func (s OrdersService) flushAccrualResults(ctx context.Context) {
+func (s OrdersService) FlushAccrualResults(ctx context.Context) {
 	log := logger.Instance.With().Caller().Logger()
 	ticker := time.NewTicker(flushInterval)
 	var updatedOrders []OrderScheme
@@ -140,7 +137,7 @@ func (s OrdersService) flushAccrualResults(ctx context.Context) {
 	}
 }
 
-func (s OrdersService) retoreAccrualFetch(ctx context.Context) {
+func (s OrdersService) Restore(ctx context.Context) {
 	log := logger.Instance.With().Caller().Logger()
 	orders, err := s.repository.ReadNonAccrualList(ctx)
 	if err != nil {

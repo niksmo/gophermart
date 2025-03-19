@@ -14,7 +14,9 @@ import (
 )
 
 func main() {
-	stopCtx, _ := signal.NotifyContext(context.Background(), os.Interrupt)
+	stopCtx, stopFn := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stopFn()
+
 	logger.Init()
 	config.Init()
 	logger.SetLevel(config.Logger.Level())

@@ -50,8 +50,11 @@ func SetupAPIRoutes(ctx context.Context, appServer server.HTTPServer) {
 	)
 
 	// Orders
-	orderService := orders.NewService(ctx, ordersRepository)
-	ordersHandler := orders.NewHandler(orderService)
+	ordersService := orders.NewService(ctx, ordersRepository)
+	go ordersService.Restore(ctx)
+	go ordersService.FlushAccrualResults(ctx)
+
+	ordersHandler := orders.NewHandler(ordersService)
 	protectedUserPath.Post(
 		"/orders",
 		ordersHandler.UploadOrder,
