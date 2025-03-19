@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/gofiber/contrib/fiberzerolog"
+	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/niksmo/gophermart/config"
 	"github.com/niksmo/gophermart/internal/auth"
@@ -16,75 +17,100 @@ import (
 	"github.com/niksmo/gophermart/pkg/server"
 )
 
-func SetupAPIRoutes(
+func SetupAPIRoute(
 	ctx context.Context,
 	appServer server.HTTPServer,
 	authConfig config.AuthConfig,
 	accrualConfig config.AccrualConfig,
 ) {
-	logMdw := fiberzerolog.New(
-		fiberzerolog.Config{Logger: &logger.Instance},
-	)
-	compressMdw := compress.New()
+	apiPath := setAPIPath(appServer)
 
-	api := appServer.Group("/api", logMdw, compressMdw)
-
-	userPath := api.Group("/user")
+	userPath := apiPath.Group("/user")
 
 	usersRepository := users.NewRepository(database.DB)
 	loyaltyRepository := loyalty.NewRepository(database.DB)
 	ordersRepository := orders.NewRepository(database.DB)
 
-	// Auth
+	setAuthPaths(userPath, authConfig, usersRepository, loyaltyRepository)
+
+	protectedRouter := userPath.Group(
+		"", middleware.Authorized(authConfig.Key()),
+	)
+
+	setOrdersPaths(ctx, protectedRouter, accrualConfig, ordersRepository)
+	setLoyaltyPaths(protectedRouter, loyaltyRepository)
+}
+
+func setAPIPath(appServer server.HTTPServer) fiber.Router {
+	logMdw := fiberzerolog.New(
+		fiberzerolog.Config{Logger: &logger.Instance},
+	)
+	compressMdw := compress.New()
+
+	return appServer.Group("/api", logMdw, compressMdw)
+}
+
+func setAuthPaths(
+	router fiber.Router,
+	authConfig config.AuthConfig,
+	usersRepository users.UsersRepository,
+	loyaltyRepository loyalty.LoyaltyRepository,
+) {
+
 	authService := auth.NewService(
 		authConfig, usersRepository, loyaltyRepository,
 	)
 	authHandler := auth.NewHandler(authService)
-	userPath.Post(
+	router.Post(
 		"/register",
 		middleware.RequireJSON,
 		authHandler.Register,
 	)
-	userPath.Post(
+	router.Post(
 		"/login",
 		middleware.RequireJSON,
 		authHandler.Login,
 	)
+}
 
-	protectedUserPath := userPath.Group(
-		"", middleware.Authorized(authConfig.Key()),
-	)
-
-	// Orders
+func setOrdersPaths(
+	ctx context.Context,
+	router fiber.Router,
+	accrualConfig config.AccrualConfig,
+	ordersRepository orders.OrdersRepository,
+) {
 	ordersService := orders.NewService(ctx, ordersRepository, accrualConfig)
 	go ordersService.Restore(ctx)
 	go ordersService.FlushAccrualResults(ctx)
 
 	ordersHandler := orders.NewHandler(ordersService)
-	protectedUserPath.Post(
+	router.Post(
 		"/orders",
 		ordersHandler.UploadOrder,
 	)
-	protectedUserPath.Get(
+	router.Get(
 		"/orders",
 		ordersHandler.GetOrders,
 	)
+}
 
-	// Loyalty
-	loyaltyService := loyalty.NewService(ctx, loyaltyRepository)
+func setLoyaltyPaths(
+	router fiber.Router, loyaltyRepository loyalty.LoyaltyRepository,
+) {
+	loyaltyService := loyalty.NewService(loyaltyRepository)
 	loyaltyHandler := loyalty.NewHandler(loyaltyService)
-	protectedUserPath.Get(
+	router.Get(
 		"/balance",
 		loyaltyHandler.GetBalance,
 	)
 
-	protectedUserPath.Post(
+	router.Post(
 		"/balance/withdraw",
 		middleware.RequireJSON,
 		loyaltyHandler.WithdrawPoints,
 	)
 
-	protectedUserPath.Get(
+	router.Get(
 		"/withdrawals",
 		loyaltyHandler.GetWithdrawals,
 	)

@@ -10,9 +10,7 @@ type LoyaltyService struct {
 	repository LoyaltyRepository
 }
 
-func NewService(
-	ctx context.Context, repository LoyaltyRepository,
-) LoyaltyService {
+func NewService(repository LoyaltyRepository) LoyaltyService {
 	return LoyaltyService{
 		repository: repository,
 	}
