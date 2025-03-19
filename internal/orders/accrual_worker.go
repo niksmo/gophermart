@@ -50,9 +50,9 @@ type AccrualWorkerPool struct {
 	ChanOUT chan<- AccrualResult
 }
 
-func (wp AccrualWorkerPool) Run(ctx context.Context) {
+func (wp AccrualWorkerPool) Run(ctx context.Context, config config.AccrualConfig) {
 	for range wp.Num {
-		worker := newAccrualWorker()
+		worker := newAccrualWorker(config)
 		go worker.Run(ctx, wp.ChanIN, wp.ChanOUT)
 	}
 }
@@ -68,10 +68,10 @@ type AccrualWorker struct {
 	makeRequestURL  func(orderNumber string) (URL string)
 }
 
-func newAccrualWorker() AccrualWorker {
+func newAccrualWorker(config config.AccrualConfig) AccrualWorker {
 	return AccrualWorker{
 		retryIntervals:  retryIntervals[:],
-		makeRequestURL:  config.Accrual.GetOrdersReqURL,
+		makeRequestURL:  config.GetOrdersReqURL,
 		currentInterval: retryIntervals[0],
 	}
 }

@@ -16,12 +16,18 @@ import (
 	"github.com/niksmo/gophermart/pkg/server"
 )
 
-func SetupAPIRoutes(ctx context.Context, appServer server.HTTPServer) {
-	logging := fiberzerolog.New(
+func SetupAPIRoutes(
+	ctx context.Context,
+	appServer server.HTTPServer,
+	authConfig config.AuthConfig,
+	accrualConfig config.AccrualConfig,
+) {
+	logMdw := fiberzerolog.New(
 		fiberzerolog.Config{Logger: &logger.Instance},
 	)
+	compressMdw := compress.New()
 
-	api := appServer.Group("/api", logging, compress.New())
+	api := appServer.Group("/api", logMdw, compressMdw)
 
 	userPath := api.Group("/user")
 
@@ -31,7 +37,7 @@ func SetupAPIRoutes(ctx context.Context, appServer server.HTTPServer) {
 
 	// Auth
 	authService := auth.NewService(
-		config.Auth, usersRepository, loyaltyRepository,
+		authConfig, usersRepository, loyaltyRepository,
 	)
 	authHandler := auth.NewHandler(authService)
 	userPath.Post(
@@ -46,11 +52,11 @@ func SetupAPIRoutes(ctx context.Context, appServer server.HTTPServer) {
 	)
 
 	protectedUserPath := userPath.Group(
-		"", middleware.Authorized(config.Auth.Key()),
+		"", middleware.Authorized(authConfig.Key()),
 	)
 
 	// Orders
-	ordersService := orders.NewService(ctx, ordersRepository)
+	ordersService := orders.NewService(ctx, ordersRepository, accrualConfig)
 	go ordersService.Restore(ctx)
 	go ordersService.FlushAccrualResults(ctx)
 

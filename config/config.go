@@ -8,12 +8,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-var Server ServerConfig
-var Accrual AccrualConfig
-var Database DatabaseCofig
-var Auth AuthConfig
-var Logger LoggerConfig
-
 func Init() {
 	pflag.ErrHelp = errors.New("gophermart: help requested")
 	pflag.StringP(addrFlag, addrFlagShort, addrDefault, addrUsage)
@@ -52,10 +46,4 @@ func Init() {
 			logger.Instance.Fatal().Err(err).Caller().Send()
 		}
 	}
-
-	Server = NewServerConfig()
-	Accrual = NewAccrualConfig()
-	Database = NewDatabaseConfig()
-	Auth = NewAuthConfig()
-	Logger = NewLoggerConfig()
 }

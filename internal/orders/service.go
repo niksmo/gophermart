@@ -6,6 +6,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/niksmo/gophermart/config"
 	"github.com/niksmo/gophermart/internal/errs"
 	"github.com/niksmo/gophermart/pkg/logger"
 )
@@ -29,7 +30,9 @@ type OrdersService struct {
 }
 
 func NewService(
-	ctx context.Context, repository OrdersRepository,
+	ctx context.Context,
+	repository OrdersRepository,
+	accrualConfig config.AccrualConfig,
 ) OrdersService {
 	accrualFetchStream := make(chan OrderScheme, pullStreamSize)
 	accrualResultStream := make(chan AccrualResult)
@@ -39,7 +42,7 @@ func NewService(
 		ChanIN:  accrualFetchStream,
 		ChanOUT: accrualResultStream,
 	}
-	workerPool.Run(ctx)
+	workerPool.Run(ctx, accrualConfig)
 
 	service := OrdersService{
 		repository:          repository,

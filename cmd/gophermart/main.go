@@ -19,12 +19,18 @@ func main() {
 
 	logger.Init()
 	config.Init()
-	logger.SetLevel(config.Logger.Level())
-	database.Connect(config.Database.URI(), logger.Instance)
+	loggerConfig := config.NewLoggerConfig()
+	dbConfig := config.NewDatabaseConfig()
+	serverConfig := config.NewServerConfig()
+	authConfig := config.NewAuthConfig()
+	accrualConfig := config.NewAccrualConfig()
+
+	logger.SetLevel(loggerConfig.Level())
+	database.Connect(dbConfig.URI(), logger.Instance)
 	database.Migrate(migrations.Init, logger.Instance)
 
-	appServer := server.NewHTTPServer(config.Server.Addr(), logger.Instance)
-	router.SetupAPIRoutes(stopCtx, appServer)
+	appServer := server.NewHTTPServer(serverConfig.Addr(), logger.Instance)
+	router.SetupAPIRoutes(stopCtx, appServer, authConfig, accrualConfig)
 
 	go appServer.Run()
 
