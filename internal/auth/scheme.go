@@ -28,9 +28,7 @@ type BaseRequestScheme struct {
 	Password string `json:"password"`
 }
 
-func (scheme BaseRequestScheme) Validate() (
-	result InvalidValidationData, ok bool,
-) {
+func (scheme BaseRequestScheme) Validate() (result any, ok bool) {
 	return validateScheme(scheme.Login, scheme.Password)
 }
 

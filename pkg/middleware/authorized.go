@@ -12,7 +12,7 @@ const bearerPrefix = "Bearer "
 
 type ctxKeyType struct{}
 
-var KeyUserID ctxKeyType
+var ContextKeyUserID ctxKeyType
 
 type UserID int32
 
@@ -32,7 +32,7 @@ func Authorized(key []byte) fiber.Handler {
 		if err != nil {
 			return fiber.ErrUnauthorized
 		}
-		c.Locals(KeyUserID, UserID(userID))
+		c.Locals(ContextKeyUserID, UserID(userID))
 		return c.Next()
 	}
 
@@ -40,7 +40,7 @@ func Authorized(key []byte) fiber.Handler {
 }
 
 func GetUserID(c *fiber.Ctx) (UserID, error) {
-	userID, ok := c.Locals(KeyUserID).(UserID)
+	userID, ok := c.Locals(ContextKeyUserID).(UserID)
 	if !ok {
 		return userID, errors.New("extracting userID from fiber.Ctx.Locals")
 	}

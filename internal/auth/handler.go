@@ -58,18 +58,12 @@ func (h AuthHandler) Login(c *fiber.Ctx) error {
 	return authorize(c, tokenString)
 }
 
-func validateAuthRequest(c *fiber.Ctx, payload any) error {
-	err := c.BodyParser(payload)
-	if err != nil {
+func validateAuthRequest(c *fiber.Ctx, payload di.Validator) error {
+	if err := c.BodyParser(payload); err != nil {
 		return fiber.NewError(fiber.StatusBadRequest, err.Error())
 	}
 
-	validator, ok := payload.(di.Validator)
-	if !ok {
-		return fiber.ErrInternalServerError
-	}
-
-	result, valid := validator.Validate()
+	result, valid := payload.Validate()
 	if !valid {
 		return c.Status(fiber.StatusBadRequest).JSON(result)
 	}
