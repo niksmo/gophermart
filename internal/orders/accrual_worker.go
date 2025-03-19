@@ -3,12 +3,12 @@ package orders
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/niksmo/gophermart/config"
+	"github.com/niksmo/gophermart/internal/errs"
 	"github.com/niksmo/gophermart/pkg/logger"
 )
 
@@ -16,6 +16,32 @@ var retryIntervals = [3]time.Duration{
 	time.Second,
 	3 * time.Second,
 	5 * time.Second,
+}
+
+type AccrualServiceResponse struct {
+	statusCode int
+	retryAfter time.Duration
+	body       []byte
+	err        error
+}
+
+func (res AccrualServiceResponse) HasRetryAfter() bool {
+	return res.retryAfter == 0
+}
+
+func (res AccrualServiceResponse) HasError() bool {
+	return res.statusCode == fiber.StatusInternalServerError ||
+		res.err != nil
+}
+
+func (res AccrualServiceResponse) Err() error {
+	if res.err != nil {
+		return res.err
+	}
+	if res.statusCode >= 400 {
+		return errs.ErrOrdersAccrualServiceAPI
+	}
+	return nil
 }
 
 type AccrualWorkerPool struct {
@@ -37,14 +63,16 @@ type AccrualResult struct {
 }
 
 type AccrualWorker struct {
-	retryIntervals []time.Duration
-	makeRequestURL func(string) string
+	retryIntervals  []time.Duration
+	currentInterval time.Duration
+	makeRequestURL  func(orderNumber string) (URL string)
 }
 
 func newAccrualWorker() AccrualWorker {
 	return AccrualWorker{
-		retryIntervals: retryIntervals[:],
-		makeRequestURL: config.Accrual.GetOrdersReqURL,
+		retryIntervals:  retryIntervals[:],
+		makeRequestURL:  config.Accrual.GetOrdersReqURL,
+		currentInterval: retryIntervals[0],
 	}
 }
 
@@ -93,55 +121,68 @@ func (w *AccrualWorker) Run(
 func (w *AccrualWorker) getAccrualStatus(
 	ctx context.Context, orderNumber string,
 ) ([]byte, error) {
-	var (
-		interval time.Duration
-		err      error
-		URL      = w.makeRequestURL(orderNumber)
-	)
+	var res AccrualServiceResponse
 	defer w.resetRetries()
+	for w.hasRetries() {
+		res = w.doRequest(orderNumber)
 
-	for len(w.retryIntervals) != 0 {
-		resp := fiber.AcquireResponse()
-		statusCode, body, errs := fiber.Get(URL).SetResponse(resp).Bytes()
-		retryAfterString := string(resp.Header.Peek("Retry-After"))
-		fiber.ReleaseResponse(resp)
-		if len(errs) != 0 {
-			err = errs[0]
+		if res.statusCode == fiber.StatusOK {
+			return res.body, nil
 		}
 
-		switch {
-		default:
-			interval = w.getRetryInterval()
-		case statusCode == fiber.StatusOK:
-			return body, nil
-		case statusCode == fiber.StatusNoContent:
-			return nil, errors.New("order didn't posted to accrual system")
-		case (statusCode == fiber.StatusTooManyRequests &&
-			retryAfterString != ""):
-			retryAfter, err := strconv.Atoi(retryAfterString)
-			if err != nil {
-				interval = w.getRetryInterval()
-			} else {
-				interval = time.Duration(retryAfter) * time.Second
-			}
-		case statusCode == fiber.StatusInternalServerError:
-			interval = w.getRetryInterval()
+		if res.statusCode == fiber.StatusNoContent {
+			return nil, errs.ErrOrdersNotPosted
 		}
 
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(interval):
+		w.nextRetryInterval(res.retryAfter)
+		if err := w.waitRetryInterval(ctx); err != nil {
+			return nil, err
 		}
-
 	}
-	return nil, err
+	return nil, res.Err()
 }
 
-func (w *AccrualWorker) getRetryInterval() time.Duration {
-	interval := w.retryIntervals[0]
+func (w *AccrualWorker) waitRetryInterval(ctx context.Context) error {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(w.currentInterval):
+	}
+	return nil
+}
+
+func (w *AccrualWorker) doRequest(orderNumber string) AccrualServiceResponse {
+	resp := fiber.AcquireResponse()
+	statusCode, body, errs := fiber.Get(w.makeRequestURL(orderNumber)).
+		SetResponse(resp).
+		Bytes()
+	retryAfterString := string(resp.Header.Peek("Retry-After"))
+	fiber.ReleaseResponse(resp)
+	retryAfterInt, _ := strconv.Atoi(retryAfterString)
+	retryAfter := time.Duration(retryAfterInt) * time.Second
+
+	var err error
+	if len(errs) != 0 {
+		err = errs[0]
+	}
+	return AccrualServiceResponse{statusCode, retryAfter, body, err}
+}
+
+func (w *AccrualWorker) hasRetries() bool {
+	return len(w.retryIntervals) != 0
+}
+
+func (w *AccrualWorker) nextRetryInterval(interval time.Duration) {
+	if !w.hasRetries() {
+		w.currentInterval = -1
+		return
+	}
+	if interval > 0 {
+		w.currentInterval = interval
+		return
+	}
+	w.currentInterval = w.retryIntervals[0]
 	w.retryIntervals = w.retryIntervals[1:]
-	return interval
 }
 
 func (w *AccrualWorker) resetRetries() {
