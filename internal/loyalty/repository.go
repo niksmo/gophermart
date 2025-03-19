@@ -3,8 +3,10 @@ package loyalty
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/niksmo/gophermart/internal/errs"
+	"github.com/niksmo/gophermart/pkg/database"
 	"github.com/niksmo/gophermart/pkg/logger"
 )
 
@@ -73,64 +75,31 @@ func (r LoyaltyRepository) ReduceBalance(
 		log.Error().Err(err).Msg("beginning tx")
 	}
 
-	defer func() {
-		if err != nil {
-			if err := tx.Rollback(ctx); err != nil {
-				log.Error().Err(err).Msg("rollback tx")
-			}
-			return
-		}
-		if err := tx.Commit(ctx); err != nil {
-			log.Error().Err(err).Msg("commit tx")
-		}
-	}()
-
-	stmt := `
-	SELECT balance
-	FROM bonus_accounts 
-	WHERE user_id=$1
-	FOR UPDATE;
-	`
-	var current float32
-	err = tx.QueryRow(ctx, stmt, userID).Scan(&current)
+	currentBalance, err := selectCurrentBalance(ctx, tx, userID)
 	if err != nil {
 		log.Error().Err(err).Msg("selecting current balance")
-		return err
+		return database.CloseTX(ctx, tx, err, log)
 	}
 
-	if current < amount {
-		return errs.ErrLoyaltyNotEnoughPoints
+	if currentBalance < amount {
+		return database.CloseTX(
+			ctx, tx, errs.ErrLoyaltyNotEnoughPoints, log,
+		)
 	}
 
-	stmt = `
-	INSERT INTO bonus_transactions (
-	user_id, order_number, transaction_type, transaction_amount
-	)
-	VALUES (
-	$1, $2, $3, $4
-	);
-	`
-	_, err = tx.Exec(ctx, stmt, userID, orderNumber, tWithdraw, amount)
+	err = insertBonusTransaction(ctx, tx, userID, orderNumber, amount)
 	if err != nil {
 		log.Error().Err(err).Msg("inserting bonus transaction")
-		return err
+		return database.CloseTX(ctx, tx, err, log)
 	}
 
-	stmt = `
-	UPDATE bonus_accounts
-	SET
-        balance=$2,
-		withdraw=withdraw+$3,
-		last_update=CURRENT_TIMESTAMP
-	WHERE user_id=$1;
-	`
-	_, err = tx.Exec(ctx, stmt, userID, current-amount, amount)
+	err = updateCurrentBalance(ctx, tx, userID, amount)
 	if err != nil {
 		log.Error().Err(err).Msg("updating user account")
-		return err
+		return database.CloseTX(ctx, tx, err, log)
 	}
 
-	return nil
+	return database.CloseTX(ctx, tx, nil, log)
 }
 
 func (r LoyaltyRepository) ReadWithdrawals(
@@ -163,4 +132,48 @@ func (r LoyaltyRepository) ReadWithdrawals(
 	}
 
 	return withdrawals, rows.Err()
+}
+
+func selectCurrentBalance(
+	ctx context.Context, tx pgx.Tx, userID int32,
+) (float32, error) {
+	stmt := `
+	SELECT balance
+	FROM bonus_accounts 
+	WHERE user_id=$1
+	FOR UPDATE;
+	`
+	var currentBalance float32
+	err := tx.QueryRow(ctx, stmt, userID).Scan(&currentBalance)
+	return currentBalance, err
+}
+
+func insertBonusTransaction(
+	ctx context.Context, tx pgx.Tx, userID int32, orderNumber string, amount float32,
+) error {
+	stmt := `
+    INSERT INTO bonus_transactions (
+        user_id, order_number, transaction_type, transaction_amount
+    )
+    VALUES (
+        $1, $2, $3, $4
+    );
+    `
+	_, err := tx.Exec(ctx, stmt, userID, orderNumber, tWithdraw, amount)
+	return err
+}
+
+func updateCurrentBalance(
+	ctx context.Context, tx pgx.Tx, userID int32, amount float32,
+) error {
+	stmt := `
+	UPDATE bonus_accounts
+	SET
+        balance=balance-$2,
+		withdraw=withdraw+$2,
+		last_update=CURRENT_TIMESTAMP
+	WHERE user_id=$1;
+	`
+	_, err := tx.Exec(ctx, stmt, userID, amount)
+	return err
 }

@@ -5,9 +5,11 @@ import (
 	"errors"
 
 	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 var DB *pgxpool.Pool
@@ -44,4 +46,22 @@ func IsUniqueError(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) &&
 		pgErr.Code == pgerrcode.UniqueViolation
+}
+
+func CloseTX(
+	ctx context.Context, tx pgx.Tx, err error, logger zerolog.Logger,
+) error {
+	if err != nil {
+		if err := tx.Rollback(ctx); err != nil {
+			log.Error().Err(err).Msg("rollback tx")
+			return err
+		}
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		log.Error().Err(err).Msg("commit tx")
+		return err
+	}
+	return nil
 }
