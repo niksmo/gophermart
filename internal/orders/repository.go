@@ -136,13 +136,13 @@ func (r OrdersRepository) UpdateAccrual(
 	}
 
 	batch := &pgx.Batch{}
-	withAccrual := prepareUpdateOrders(batch, orders)
-	prepareBonusTransactions(batch, withAccrual)
+	withAccrual := prepareOrderUpdateBatch(batch, orders)
+	prepareInsertBonusBatch(batch, withAccrual)
 	err = tx.SendBatch(ctx, batch).Close()
 	return database.CloseTX(ctx, tx, err, log)
 }
 
-func prepareUpdateOrders(
+func prepareOrderUpdateBatch(
 	batch *pgx.Batch, orders []OrderScheme,
 ) (withAccrual []OrderScheme) {
 	for _, order := range orders {
@@ -162,7 +162,7 @@ func prepareUpdateOrders(
 	return withAccrual
 }
 
-func prepareBonusTransactions(batch *pgx.Batch, withAccrual []OrderScheme) {
+func prepareInsertBonusBatch(batch *pgx.Batch, withAccrual []OrderScheme) {
 	for _, order := range withAccrual {
 		stmt := `
 		WITH transaction AS (
