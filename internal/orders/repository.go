@@ -135,22 +135,16 @@ func (r OrdersRepository) UpdateAccrual(
 		return err
 	}
 
-	defer func() {
-		if err != nil {
-			if err := tx.Rollback(ctx); err != nil {
-				log.Error().Err(err).Msg("rollback tx")
-			}
-			return
-		}
-		if err := tx.Commit(ctx); err != nil {
-			log.Error().Err(err).Msg("commit tx")
-		}
-	}()
-
 	batch := &pgx.Batch{}
+	withAccrual := prepareUpdateOrders(batch, orders)
+	prepareBonusTransactions(batch, withAccrual)
+	err = tx.SendBatch(ctx, batch).Close()
+	return database.CloseTX(ctx, tx, err, log)
+}
 
-	var withAccrual []OrderScheme
-
+func prepareUpdateOrders(
+	batch *pgx.Batch, orders []OrderScheme,
+) (withAccrual []OrderScheme) {
 	for _, order := range orders {
 		stmt := `
 		UPDATE orders
@@ -165,7 +159,10 @@ func (r OrdersRepository) UpdateAccrual(
 			withAccrual = append(withAccrual, order)
 		}
 	}
+	return withAccrual
+}
 
+func prepareBonusTransactions(batch *pgx.Batch, withAccrual []OrderScheme) {
 	for _, order := range withAccrual {
 		stmt := `
 		WITH transaction AS (
@@ -182,7 +179,4 @@ func (r OrdersRepository) UpdateAccrual(
 		`
 		batch.Queue(stmt, order.OwnerID, order.Number, tAdd, order.Accrual)
 	}
-
-	err = tx.SendBatch(ctx, batch).Close()
-	return err
 }

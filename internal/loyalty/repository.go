@@ -73,6 +73,7 @@ func (r LoyaltyRepository) ReduceBalance(
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("beginning tx")
+		return err
 	}
 
 	currentBalance, err := selectCurrentBalance(ctx, tx, userID)
@@ -116,13 +117,14 @@ func (r LoyaltyRepository) ReadWithdrawals(
 	WHERE user_id=$1 AND transaction_type=$2
 	ORDER BY processed_at DESC;
 	`
+	var withdrawals WithdrawalsScheme
 	rows, err := r.db.Query(ctx, stmt, userID, tWithdraw)
 	if err != nil {
 		log.Error().Err(err).Msg("selecting loyalty account transactions")
+		return withdrawals, err
 	}
 	defer rows.Close()
 
-	var withdrawals WithdrawalsScheme
 	for rows.Next() {
 		err = withdrawals.ScanRow(rows)
 		if err != nil {
